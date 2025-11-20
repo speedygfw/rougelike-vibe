@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roguelike</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="app">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-layer">
+      <div id="stats" class="glass-panel">
+        <div class="stat-row"><span class="label">HP:</span> <span id="hp-val">100/100</span></div>
+        <div class="stat-row"><span class="label">Lvl:</span> <span id="lvl-val">1</span></div>
+      </div>
+      <div id="log" class="glass-panel">
+        <div class="log-entry">Welcome to the dungeon...</div>
+      </div>
+      <div id="inventory" class="glass-panel" style="display: none;">
+        <h3>Inventory</h3>
+        <ul id="inventory-list"></ul>
+        <small>Click to use</small>
+      </div>
+      <div id="game-over" style="display: none;">
+        <h1>GAME OVER</h1>
+        <p>Press Enter to Restart</p>
+      </div>
+      <div id="victory-screen" style="display: none;">
+        <h1>VICTORY!</h1>
+        <p>You have retrieved the Amulet of Yendor!</p>
+        <p>Press Enter to Play Again</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>
