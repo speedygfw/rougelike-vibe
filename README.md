@@ -1,3 +1,18 @@
+# Mein Roguelike - Dungeon Crawler
+
+## 🎮 Jetzt Spielen
+Du kannst das Spiel direkt hier im Browser spielen:
+**[👉 Hier klicken um zu spielen](https://fwall.github.io/mein-rougelike/)**
+
+*(Hinweis: Der Link funktioniert erst, nachdem der Code auf GitHub gepusht wurde und die "Deploy to GitHub Pages" Action durchgelaufen ist.)*
+
+## 🚀 Spiel Starten (Lokal)
+
+Um das Spiel lokal zu starten, folge diesen Schritten:
+
+1.  **Repository klonen** (falls noch nicht geschehen).
+2.  **Abhängigkeiten installieren**:
+    Öffne ein Terminal im Projektordner und führe aus:
     ```bash
     npm install
     ```
