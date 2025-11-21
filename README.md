@@ -1,65 +1,97 @@
-Roguelike Development Walkthrough
+# Mein Roguelike
+
+Ein klassisches Roguelike-Abenteuer im Browser, entwickelt mit modernen Web-Technologien.
 
 <img width="609" height="298" alt="image" src="https://github.com/user-attachments/assets/9fed6127-ead8-4081-9851-57240e653dde" />
 
-1. Game Setup & Core Mechanics
+## 🚀 Spiel Starten
+
+Um das Spiel lokal zu starten, folge diesen Schritten:
+
+1.  **Repository klonen** (falls noch nicht geschehen).
+2.  **Abhängigkeiten installieren**:
+    Öffne ein Terminal im Projektordner und führe aus:
+    ```bash
+    npm install
+    ```
+3.  **Entwicklungsserver starten**:
+    ```bash
+    npm run dev
+    ```
+4.  Öffne die im Terminal angezeigte URL (meist `http://localhost:5173`) in deinem Browser.
+
+## 📖 Über das Spiel
+
+Dieses Projekt entstand als Experiment in der Zusammenarbeit zwischen Mensch und KI.
+
+*   **Entstehung**: Das Spiel wurde in einer Pair-Programming-Session mit einer KI entwickelt. Ziel war es, von Grund auf ein funktionierendes Roguelike zu bauen, angefangen bei der Basis-Engine bis hin zu komplexeren Features wie Inventar-Management und Boss-Kämpfen.
+*   **Technologie**:
+    *   **Engine**: Eigene JavaScript-Engine (keine externen Game-Libraries).
+    *   **Rendering**: HTML5 Canvas.
+    *   **UI**: HTML/CSS mit einem "Dark Glass" Design.
+    *   **Build-Tool**: Vite.
+    *   **Tests**: Vitest.
+
+## 🎮 Spielanleitung
+
+### Ziel
+Dein Ziel ist es, tief in den Dungeon hinabzusteigen und das **Amulett von Yendor** auf **Level 10** zu finden. Sobald du es besitzt, hast du gewonnen!
+
+### Steuerung
+*   **Pfeiltasten**: Bewegen und Angreifen (in Gegner hineinbewegen).
+*   **Maus**: Interaktion mit dem UI (Inventar, Logs).
+
+### Mechaniken
+*   **Rundenbasiert**: Die Welt bewegt sich nur, wenn du dich bewegst. Nimm dir Zeit für deine Entscheidungen.
+*   **Kampf**: Bewege dich auf ein Feld mit einem Gegner, um anzugreifen.
+*   **Ausrüstung**: Finde Waffen und Rüstungen, um stärker zu werden. Ausrüstung wird automatisch angelegt, wenn sie besser ist als deine aktuelle.
+*   **Items**: Nutze Tränke (Heilung) und Schriftrollen (Feuerball, Teleportation) weise.
+*   **Gegner**: Verschiedene Gegner haben unterschiedliche Verhaltensweisen. Vorsicht vor dem Drachen auf Level 10!
+
+---
+
+## 🛠️ Entwicklungstagebuch
+
+Nachfolgend findest du das Protokoll der Entwicklungsphasen dieses Projekts.
+
+### 1. Game Setup & Core Mechanics
 I successfully wired up the game entry point and verified the core mechanics.
 
-Entry Point: Fixed 
-src/main.js
- conflict.
-Mechanics: Verified movement, map generation, and basic combat.
-Game Running
-Review
-Game Running
+*   **Entry Point**: Fixed `src/main.js` conflict.
+*   **Mechanics**: Verified movement, map generation, and basic combat.
 
-2. UI/UX Overhaul
+### 2. UI/UX Overhaul
 I upgraded the game's interface to a premium "Dark Glass" aesthetic.
 
-Changes Implemented
-Glassmorphism: Added semi-transparent backgrounds with blur to UI panels.
-Typography: Integrated 'Cinzel' (headers) and 'Inter' (body) fonts.
-Animations: Added fade-in and slide-in effects for logs and menus.
-Styling: Created a consistent color palette with neon accents.
-Visual Verification
-The new UI is active and rendering correctly in the browser.
+*   **Glassmorphism**: Added semi-transparent backgrounds with blur to UI panels.
+*   **Typography**: Integrated 'Cinzel' (headers) and 'Inter' (body) fonts.
+*   **Animations**: Added fade-in and slide-in effects for logs and menus.
+*   **Styling**: Created a consistent color palette with neon accents.
 
-New UI
-Review
-New UI
-
-3. Content Expansion
+### 3. Content Expansion
 I added depth to the gameplay with new items, enemies, and equipment.
 
-New Features
-Scrolls: Added 
-ScrollOfFireball
- (AOE damage) and 
-ScrollOfTeleport
- (Escape).
-Advanced AI:
-Shaman: Casts ranged spells and flees if too close.
-Bat: Moves faster/erratically.
-Tiered Equipment: Weapons and Armor now have tiers (e.g., Rusty Dagger -> Mithril Blade) that scale with player level.
-4. Testing & Refactoring
+*   **New Features**:
+    *   **Scrolls**: Added `ScrollOfFireball` (AOE damage) and `ScrollOfTeleport` (Escape).
+    *   **Advanced AI**:
+        *   Shaman: Casts ranged spells and flees if too close.
+        *   Bat: Moves faster/erratically.
+    *   **Tiered Equipment**: Weapons and Armor now have tiers (e.g., Rusty Dagger -> Mithril Blade) that scale with player level.
+
+### 4. Testing & Refactoring
 I established a robust testing environment to ensure game stability.
 
-Actions
-Refactoring: Moved all tests to a dedicated tests/ directory for better organization.
-New Tests: Added unit tests for Scrolls (Fireball/Teleport) and Enemy AI (Shaman fleeing/Bat movement).
-Verification: Ran the full test suite with vitest, confirming all 16 tests pass.
-5. Endgame Content
+*   **Refactoring**: Moved all tests to a dedicated `tests/` directory for better organization.
+*   **New Tests**: Added unit tests for Scrolls (Fireball/Teleport) and Enemy AI (Shaman fleeing/Bat movement).
+*   **Verification**: Ran the full test suite with vitest, confirming all 16 tests pass.
+
+### 5. Endgame Content
 I implemented the final challenge and victory condition for the game.
 
-Features
-Boss Battle: Added a Dragon enemy that spawns at Level 10.
-High HP (150) and Attack (20).
-Special 'Firebreath' attack (25 damage) when aligned with the player.
-Win Condition: Added the Amulet of Yendor.
-Spawns on Level 10.
-Picking it up or using it triggers the Victory state.
-Victory Screen: A dedicated screen to celebrate the player's success.
-Verification
-Tests: Verified syntax and logic via vitest (all tests passed).
-Browser: Confirmed game loads and core loop functions (despite some transient server errors).
-
+*   **Boss Battle**: Added a Dragon enemy that spawns at Level 10.
+    *   High HP (150) and Attack (20).
+    *   Special 'Firebreath' attack (25 damage) when aligned with the player.
+*   **Win Condition**: Added the Amulet of Yendor.
+    *   Spawns on Level 10.
+    *   Picking it up or using it triggers the Victory state.
+*   **Victory Screen**: A dedicated screen to celebrate the player's success.
