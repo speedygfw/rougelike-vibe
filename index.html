@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="A classic roguelike dungeon crawler built with JavaScript and HTML5 Canvas. Explore, fight, and survive!" />
+  <title>Mein Roguelike - Dungeon Crawler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap"
+    rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-X7oU1A4a.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-IPvGzZbg.css">
+</head>
+
+<body>
+  <div id="app">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-layer">
+      <div id="stats" class="glass-panel">
+        <div class="stat-row"><span class="label">HP:</span> <span id="hp-val">100/100</span></div>
+        <div class="stat-row"><span class="label">Lvl:</span> <span id="lvl-val">1</span></div>
+      </div>
+      <div id="controls">
+        <h3>Controls</h3>
+        <p>Move / Attack <span>Arrow Keys</span></p>
+        <p>Pickup Item <span>G</span></p>
+        <p>Inventory <span>I</span></p>
+        <p>Interact <span>Click</span></p>
+      </div>
+      <div id="log" class="glass-panel">
+        <div class="log-entry">Welcome to the dungeon...</div>
+      </div>
+      <div id="inventory" class="glass-panel" style="display: none;">
+        <h3>Inventory</h3>
+        <ul id="inventory-list"></ul>
+        <small>Click to use</small>
+      </div>
+      <div id="game-over" style="display: none;">
+        <h1>GAME OVER</h1>
+        <p>Press Enter to Restart</p>
+        <button id="restart-btn-go" style="margin-top: 20px;">Restart</button>
+      </div>
+      <div id="victory-screen" style="display: none;">
+        <h1>VICTORY!</h1>
+        <p>You have retrieved the Amulet of Yendor!</p>
+        <p>Press Enter to Play Again</p>
+        <button id="restart-btn-vic" style="margin-top: 20px;">Play Again</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
