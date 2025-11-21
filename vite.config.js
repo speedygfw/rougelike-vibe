@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-    base: './', // Use relative paths for assets
+    base: '/rougelike-vibe/', // Match repository name for GitHub Pages
     build: {
         outDir: 'dist',
     },

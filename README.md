@@ -2,7 +2,7 @@
 
 ## 🎮 Jetzt Spielen
 Du kannst das Spiel direkt hier im Browser spielen:
-**[👉 Hier klicken um zu spielen](https://fwall.github.io/mein-rougelike/)**
+**[👉 Hier klicken um zu spielen](https://speedygfw.github.io/rougelike-vibe/)**
 
 *(Hinweis: Der Link funktioniert erst, nachdem der Code auf GitHub gepusht wurde und die "Deploy to GitHub Pages" Action durchgelaufen ist.)*
 
