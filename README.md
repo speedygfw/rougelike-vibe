@@ -1,16 +1,3 @@
-# Mein Roguelike
-
-Ein klassisches Roguelike-Abenteuer im Browser, entwickelt mit modernen Web-Technologien.
-
-<img width="609" height="298" alt="image" src="https://github.com/user-attachments/assets/9fed6127-ead8-4081-9851-57240e653dde" />
-
-## 🚀 Spiel Starten
-
-Um das Spiel lokal zu starten, folge diesen Schritten:
-
-1.  **Repository klonen** (falls noch nicht geschehen).
-2.  **Abhängigkeiten installieren**:
-    Öffne ein Terminal im Projektordner und führe aus:
     ```bash
     npm install
     ```

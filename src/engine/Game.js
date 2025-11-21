@@ -135,6 +135,11 @@ export default class Game {
     init() {
         this.generateLevel();
         window.addEventListener('keydown', (e) => this.handleInput(e));
+
+        // Restart Buttons
+        document.getElementById('restart-btn-go').onclick = () => this.restart();
+        document.getElementById('restart-btn-vic').onclick = () => this.restart();
+
         this.update();
     }
 
