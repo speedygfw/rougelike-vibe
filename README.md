@@ -45,9 +45,11 @@ Dein Ziel ist es, tief in den Dungeon hinabzusteigen und das **Amulett von Yendo
 
 ### Mechaniken
 *   **Rundenbasiert**: Die Welt bewegt sich nur, wenn du dich bewegst. Nimm dir Zeit für deine Entscheidungen.
+*   **Klassen**: Wähle zu Beginn zwischen Krieger (mehr HP), Magier (weniger HP) und Schurke.
 *   **Kampf**: Bewege dich auf ein Feld mit einem Gegner, um anzugreifen.
-*   **Ausrüstung**: Finde Waffen und Rüstungen, um stärker zu werden. Ausrüstung wird automatisch angelegt, wenn sie besser ist als deine aktuelle.
-*   **Items**: Nutze Tränke (Heilung) und Schriftrollen (Feuerball, Teleportation) weise.
+*   **Ausrüstung**: Finde Waffen und Rüstungen, um stärker zu werden.
+*   **Items**: Nutze Tränke, Schriftrollen und finde Schlüssel für verschlossene Türen.
+*   **Level-Vielfalt**: Erkunde klassische Dungeons und organische Höhlensysteme.
 *   **Gegner**: Verschiedene Gegner haben unterschiedliche Verhaltensweisen. Vorsicht vor dem Drachen auf Level 10!
 
 ---
@@ -97,3 +99,11 @@ I implemented the final challenge and victory condition for the game.
     *   Spawns on Level 10.
     *   Picking it up or using it triggers the Victory state.
 *   **Victory Screen**: A dedicated screen to celebrate the player's success.
+
+### 6. Feature Expansion & Polish
+I implemented major gameplay features to increase variety and replayability.
+
+*   **Character Classes**: Added a class selection screen (Warrior, Rogue, Mage) impacting starting stats.
+*   **Doors & Keys**: Added locked doors and keys to dungeon generation.
+*   **Varied Levels**: Implemented Cellular Automata for Cave generation, mixing up the level styles.
+*   **Polish**: Refined the UI and added comprehensive unit tests for all new features.

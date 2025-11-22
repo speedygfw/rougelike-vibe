@@ -2,7 +2,7 @@ import Renderer from './Renderer.js';
 import MapGenerator from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
-import { Potion, ScrollOfFireball, ScrollOfTeleport, AmuletOfYendor } from '../entities/Item.js';
+import { Potion, ScrollOfFireball, ScrollOfTeleport, AmuletOfYendor, Key } from '../entities/Item.js';
 import { Weapon, Armor } from '../entities/Equipment.js';
 import FOV from './FOV.js';
 import Audio from './Audio.js';
@@ -123,24 +123,59 @@ export default class Game {
         if (data.name.includes('Potion')) return new Potion(data.x, data.y);
         if (data.name.includes('Fireball')) return new ScrollOfFireball(data.x, data.y);
         if (data.name.includes('Teleport')) return new ScrollOfTeleport(data.x, data.y);
-        if (data.name.includes('Amulet')) return new AmuletOfYendor(data.x, data.y);
-        return data;
-    }
-
-    start() {
-        this.init();
+        this.update();
         this.loop();
     }
 
     init() {
-        this.generateLevel();
-        window.addEventListener('keydown', (e) => this.handleInput(e));
+        try {
+            console.log("Game.init() called");
+            const selectionDiv = document.getElementById('class-selection');
+            const cards = document.querySelectorAll('.class-card');
+            console.log("Found selectionDiv:", selectionDiv);
+            console.log("Found cards:", cards.length);
 
-        // Restart Buttons
-        document.getElementById('restart-btn-go').onclick = () => this.restart();
-        document.getElementById('restart-btn-vic').onclick = () => this.restart();
+            if (!selectionDiv) {
+                console.error("Critical Error: class-selection element not found!");
+                return;
+            }
 
-        this.update();
+            cards.forEach(card => {
+                card.onclick = () => {
+                    try {
+                        console.log("Card clicked:", card.getAttribute('data-class'));
+                        const classType = card.getAttribute('data-class');
+                        if (selectionDiv) selectionDiv.style.display = 'none';
+                        this.startGame(classType);
+                    } catch (e) {
+                        console.error("Error handling card click:", e);
+                        alert("Error starting game: " + e.message);
+                    }
+                };
+            });
+
+            // Restart Buttons
+            const btnGo = document.getElementById('restart-btn-go');
+            const btnVic = document.getElementById('restart-btn-vic');
+            if (btnGo) btnGo.onclick = () => this.restart();
+            if (btnVic) btnVic.onclick = () => this.restart();
+
+        } catch (e) {
+            console.error("Error in Game.init:", e);
+        }
+    }
+
+    startGame(classType) {
+        try {
+            console.log("Starting game with class:", classType);
+            this.playerClass = classType;
+            this.generateLevel();
+            this.update();
+            this.loop();
+        } catch (e) {
+            console.error("Error in startGame:", e);
+            alert("Critical Game Error: " + e.message);
+        }
     }
 
     generateLevel() {
@@ -155,7 +190,7 @@ export default class Game {
             const center = this.mapGenerator.getCenter(firstRoom);
 
             if (!this.player) {
-                this.player = new Player(center.x, center.y);
+                this.player = new Player(center.x, center.y, this.playerClass);
             } else {
                 this.player.x = center.x;
                 this.player.y = center.y;
@@ -214,6 +249,15 @@ export default class Game {
                             }
                         }
                     }
+
+                    // Chance to spawn Key
+                    if (Math.random() < 0.2) {
+                        const kx = Math.floor(Math.random() * room.w) + room.x;
+                        const ky = Math.floor(Math.random() * room.h) + room.y;
+                        if (this.map.tiles[ky][kx] === 'floor') {
+                            this.items.push(new Key(kx, ky));
+                        }
+                    }
                 }
 
                 while (this.enemies.length < 3) {
@@ -227,6 +271,7 @@ export default class Game {
             }
 
         } else {
+            // Cave Level Spawning
             let px, py;
             do {
                 px = Math.floor(Math.random() * this.map.width);
@@ -234,22 +279,60 @@ export default class Game {
             } while (this.map.tiles[py][px] === 'wall');
 
             if (!this.player) {
-                this.player = new Player(px, py);
+                this.player = new Player(px, py, this.playerClass);
             } else {
                 this.player.x = px;
                 this.player.y = py;
             }
             this.enemies = [];
             this.items = [];
+
+            // Spawn Enemies
+            for (let i = 0; i < 6; i++) {
+                let ex, ey;
+                do {
+                    ex = Math.floor(Math.random() * this.map.width);
+                    ey = Math.floor(Math.random() * this.map.height);
+                } while (this.map.tiles[ey][ex] === 'wall' || (ex === px && ey === py));
+
+                const roll = Math.random();
+                let type = 'goblin';
+                if (roll < 0.2) type = 'bat';
+                else if (roll < 0.4) type = 'shaman';
+                else if (roll < 0.5) type = 'orc';
+                else if (roll < 0.65) type = 'skeleton';
+                else if (roll < 0.7) type = 'ogre';
+
+                this.enemies.push(new Enemy(ex, ey, type));
+            }
+
+            // Spawn Items
+            for (let i = 0; i < 4; i++) {
+                let ix, iy;
+                do {
+                    ix = Math.floor(Math.random() * this.map.width);
+                    iy = Math.floor(Math.random() * this.map.height);
+                } while (this.map.tiles[iy][ix] === 'wall');
+
+                const roll = Math.random();
+                if (roll < 0.4) {
+                    this.items.push(new Potion(ix, iy));
+                } else if (roll < 0.5) {
+                    this.items.push(new ScrollOfFireball(ix, iy));
+                } else if (roll < 0.6) {
+                    this.items.push(new ScrollOfTeleport(ix, iy));
+                } else if (roll < 0.8) {
+                    const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
+                    this.items.push(new Weapon(ix, iy, tier));
+                } else {
+                    const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
+                    this.items.push(new Armor(ix, iy, tier));
+                }
+            }
         }
 
         this.updateFOV();
         this.log(`Entered Level ${this.player.level}`, 'important');
-    }
-
-    updateFOV() {
-        this.visibleTiles = this.fov.compute(this.player.x, this.player.y, this.fovRadius);
-        this.visibleTiles.forEach(key => this.exploredTiles.add(key));
     }
 
     handleInput(e) {
@@ -277,13 +360,30 @@ export default class Game {
                 this.update();
                 setTimeout(() => this.enemyTurn(), 100);
             } else {
-                const moved = this.player.move(command.dx, command.dy, this.map);
-                if (moved) {
-                    this.audio.playFootstep();
-                    this.updateFOV();
-                    this.isPlayerTurn = false;
-                    this.update();
-                    setTimeout(() => this.enemyTurn(), 100);
+                const tile = this.map.tiles[targetY][targetX];
+                if (tile === 'door_closed') {
+                    const keyIndex = this.player.inventory.findIndex(i => i.name === 'Golden Key');
+                    if (keyIndex !== -1) {
+                        this.log("You unlock the door with your key.", 'success');
+                        this.map.tiles[targetY][targetX] = 'door_open';
+                        this.player.inventory.splice(keyIndex, 1);
+                        this.updateUI();
+                        this.audio.playPickup(); // Reuse sound for now
+                        this.isPlayerTurn = false;
+                        this.update();
+                        setTimeout(() => this.enemyTurn(), 100);
+                    } else {
+                        this.log("The door is locked. You need a key.", 'warning');
+                    }
+                } else {
+                    const moved = this.player.move(command.dx, command.dy, this.map);
+                    if (moved) {
+                        this.audio.playFootstep();
+                        this.updateFOV();
+                        this.isPlayerTurn = false;
+                        this.update();
+                        setTimeout(() => this.enemyTurn(), 100);
+                    }
                 }
             }
         } else if (command.type === 'interact') {
@@ -472,6 +572,10 @@ export default class Game {
     updateUI() {
         document.getElementById('hp-val').innerText = `${this.player.hp}/${this.player.maxHp}`;
         document.getElementById('lvl-val').innerText = this.player.level;
+        document.getElementById('atk-val').innerText = this.player.getAttack();
+        document.getElementById('def-val').innerText = this.player.getDefense();
+        document.getElementById('weapon-val').innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
+        document.getElementById('armor-val').innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
     }
 
     restart() {

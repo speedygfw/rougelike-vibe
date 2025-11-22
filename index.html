@@ -22,6 +22,10 @@
       <div id="stats" class="glass-panel">
         <div class="stat-row"><span class="label">HP:</span> <span id="hp-val">100/100</span></div>
         <div class="stat-row"><span class="label">Lvl:</span> <span id="lvl-val">1</span></div>
+        <div class="stat-row"><span class="label">Atk:</span> <span id="atk-val">5</span></div>
+        <div class="stat-row"><span class="label">Def:</span> <span id="def-val">0</span></div>
+        <div class="stat-row"><span class="label">Wpn:</span> <span id="weapon-val">None</span></div>
+        <div class="stat-row"><span class="label">Arm:</span> <span id="armor-val">None</span></div>
       </div>
       <div id="controls">
         <h3>Controls</h3>
@@ -48,6 +52,30 @@
         <p>You have retrieved the Amulet of Yendor!</p>
         <p>Press Enter to Play Again</p>
         <button id="restart-btn-vic" style="margin-top: 20px;">Play Again</button>
+      </div>
+      <div id="class-selection" class="glass-panel"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; background: rgba(0,0,0,0.9);">
+        <h1>Choose Your Class</h1>
+        <div style="display: flex; gap: 20px; margin-top: 30px;">
+          <div class="class-card" data-class="warrior"
+            style="cursor: pointer; padding: 20px; border: 1px solid #555; border-radius: 8px; text-align: center;">
+            <h2>Warrior</h2>
+            <div style="font-size: 40px;">⚔️</div>
+            <p>High HP, starts with Sword</p>
+          </div>
+          <div class="class-card" data-class="rogue"
+            style="cursor: pointer; padding: 20px; border: 1px solid #555; border-radius: 8px; text-align: center;">
+            <h2>Rogue</h2>
+            <div style="font-size: 40px;">🗡️</div>
+            <p>Agile, starts with Dagger & Key</p>
+          </div>
+          <div class="class-card" data-class="mage"
+            style="cursor: pointer; padding: 20px; border: 1px solid #555; border-radius: 8px; text-align: center;">
+            <h2>Mage</h2>
+            <div style="font-size: 40px;">📜</div>
+            <p>Fragile, starts with Fireball</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

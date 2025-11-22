@@ -112,3 +112,14 @@ export class AmuletOfYendor extends Item {
         return true; // Logic handled in Game.js pickup or use
     }
 }
+
+export class Key extends Item {
+    constructor(x, y) {
+        super(x, y, 'Golden Key', '🔑', '#ffd700');
+    }
+
+    use(player, game) {
+        game.log("This key can open locked doors.", 'info');
+        return false; // Not usable directly, used on interaction
+    }
+}

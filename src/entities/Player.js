@@ -2,8 +2,9 @@ import Entity from './Entity.js';
 
 
 export default class Player extends Entity {
-    constructor(x, y) {
+    constructor(x, y, classType = 'warrior') {
         super(x, y, '@', '#fff');
+        this.classType = classType;
         this.hp = 100;
         this.maxHp = 100;
         this.level = 1;
@@ -14,6 +15,14 @@ export default class Player extends Entity {
             weapon: null,
             armor: null
         };
+
+        if (this.classType === 'warrior') {
+            this.maxHp += 20;
+            this.hp = this.maxHp;
+        } else if (this.classType === 'mage') {
+            this.maxHp -= 20;
+            this.hp = this.maxHp;
+        }
     }
 
     gainXp(amount) {
