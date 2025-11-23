@@ -258,7 +258,7 @@ export default class Game {
                     }
 
                     // Chance to spawn Key
-                    if (Math.random() < 0.2) {
+                    if (Math.random() < 0.4) {
                         const kx = Math.floor(Math.random() * room.w) + room.x;
                         const ky = Math.floor(Math.random() * room.h) + room.y;
                         if (this.map.tiles[ky][kx] === 'floor') {
@@ -409,6 +409,84 @@ export default class Game {
         } else if (command.type === 'restart') {
             // Handle restart if needed
         }
+
+        // Spell Casting (Keys 1-9)
+        if (e.key >= '1' && e.key <= '9') {
+            const spellIndex = parseInt(e.key) - 1;
+            if (spellIndex < this.player.spells.length) {
+                this.castSpell(spellIndex);
+            }
+        }
+    }
+
+    castSpell(index) {
+        const spell = this.player.spells[index];
+        if (this.player.mana < spell.cost) {
+            this.log(`Not enough mana for ${spell.name}!`, 'warning');
+            return;
+        }
+
+        let cast = false;
+        if (spell.type === 'heal') {
+            if (this.player.hp < this.player.maxHp) {
+                this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
+                this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
+                this.renderer.triggerEffect(this.player.x, this.player.y, 'heal'); // Need to add heal effect
+                cast = true;
+            } else {
+                this.log("You are already at full health.", 'warning');
+            }
+        } else if (spell.type === 'damage') {
+            // Find nearest enemy
+            let target = null;
+            let minDist = spell.range + 1;
+            this.enemies.forEach(e => {
+                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
+                if (dist <= spell.range && dist < minDist) {
+                    minDist = dist;
+                    target = e;
+                }
+            });
+
+            if (target) {
+                target.hp -= spell.damage;
+                this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
+                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                if (target.hp <= 0) {
+                    this.log(`${target.char} is destroyed! +${target.xpValue || 10} XP`, 'success');
+                    this.player.gainXp(target.xpValue || 10);
+                    this.enemies = this.enemies.filter(e => e !== target);
+                }
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'teleport') {
+            // Simple random teleport
+            let tx, ty;
+            let tries = 0;
+            do {
+                tx = Math.floor(Math.random() * this.map.width);
+                ty = Math.floor(Math.random() * this.map.height);
+                tries++;
+            } while ((this.map.tiles[ty][tx] === 'wall' || (tx === this.player.x && ty === this.player.y)) && tries < 100);
+
+            if (this.map.tiles[ty][tx] !== 'wall') {
+                this.player.x = tx;
+                this.player.y = ty;
+                this.log("You vanish into the shadows!", 'magic');
+                this.updateFOV();
+                cast = true;
+            }
+        }
+
+        if (cast) {
+            this.player.mana -= spell.cost;
+            this.updateUI();
+            this.isPlayerTurn = false;
+            this.update();
+            setTimeout(() => this.enemyTurn(), 100);
+        }
     }
 
     pickupItem() {
@@ -515,6 +593,13 @@ export default class Game {
                 }
             });
         });
+
+
+        // Mana Regen
+        if (this.player.mana < this.player.maxMana) {
+            this.player.mana = Math.min(this.player.mana + 1, this.player.maxMana);
+        }
+
         this.isPlayerTurn = true;
         this.update();
     }
@@ -578,21 +663,7 @@ export default class Game {
 
         this.enemies.forEach(enemy => {
             this.renderer.drawEntity(enemy, this.visibleTiles);
-        });
-
-        this.renderer.drawEntity(this.player, this.visibleTiles);
-    }
-
-    updateUI() {
-        document.getElementById('hp-val').innerText = `${this.player.hp}/${this.player.maxHp}`;
-        document.getElementById('lvl-val').innerText = this.player.level;
-        document.getElementById('atk-val').innerText = this.player.getAttack();
-        document.getElementById('def-val').innerText = this.player.getDefense();
-        document.getElementById('weapon-val').innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
-        document.getElementById('armor-val').innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
-    }
-
-    restart() {
-        location.reload();
-    }
-}
+            restart() {
+                location.reload();
+            }
+        }

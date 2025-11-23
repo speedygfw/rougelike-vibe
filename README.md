@@ -1,60 +1,60 @@
-# Mein Roguelike - Dungeon Crawler
+# My Roguelike - Dungeon Crawler
 
-## 🎮 Jetzt Spielen
-Du kannst das Spiel direkt hier im Browser spielen:
-**[👉 Hier klicken um zu spielen](https://speedygfw.github.io/rougelike-vibe/)**
+## 🎮 Play Now
+You can play the game directly in your browser here:
+**[👉 Click here to play](https://speedygfw.github.io/rougelike-vibe/)**
 
-## 🚀 Spiel Starten (Lokal)
+## 🚀 Start Game (Local)
 
-Um das Spiel lokal zu starten, folge diesen Schritten:
+To start the game locally, follow these steps:
 
-1.  **Repository klonen** (falls noch nicht geschehen).
-2.  **Abhängigkeiten installieren**:
-    Öffne ein Terminal im Projektordner und führe aus:
+1.  **Clone Repository** (if not already done).
+2.  **Install Dependencies**:
+    Open a terminal in the project folder and run:
     ```bash
     npm install
     ```
-3.  **Entwicklungsserver starten**:
+3.  **Start Development Server**:
     ```bash
     npm run dev
     ```
-4.  Öffne die im Terminal angezeigte URL (meist `http://localhost:5173`) in deinem Browser.
+4.  Open the URL shown in the terminal (usually `http://localhost:5173`) in your browser.
 
-## 📖 Über das Spiel
+## 📖 About the Game
 
-Dieses Projekt entstand als Experiment in der Zusammenarbeit zwischen Mensch und KI.
+This project was created as an experiment in collaboration between human and AI.
 
-*   **Entstehung**: Das Spiel wurde in einer Pair-Programming-Session mit einer KI entwickelt. Ziel war es, von Grund auf ein funktionierendes Roguelike zu bauen, angefangen bei der Basis-Engine bis hin zu komplexeren Features wie Inventar-Management und Boss-Kämpfen.
-*   **Technologie**:
-    *   **Engine**: Eigene JavaScript-Engine (keine externen Game-Libraries).
+*   **Origin**: The game was developed in a pair programming session with an AI. The goal was to build a functioning Roguelike from scratch, starting with the base engine up to complex features like inventory management and boss fights.
+*   **Technology**:
+    *   **Engine**: Custom JavaScript engine (no external game libraries).
     *   **Rendering**: HTML5 Canvas.
-    *   **UI**: HTML/CSS mit einem "Dark Glass" Design.
-    *   **Build-Tool**: Vite.
+    *   **UI**: HTML/CSS with a "Dark Glass" design.
+    *   **Build Tool**: Vite.
     *   **Tests**: Vitest.
 
-## 🎮 Spielanleitung
+## 🎮 How to Play
 
-### Ziel
-Dein Ziel ist es, tief in den Dungeon hinabzusteigen und das **Amulett von Yendor** auf **Level 10** zu finden. Sobald du es besitzt, hast du gewonnen!
+### Goal
+Your goal is to descend deep into the dungeon and find the **Amulet of Yendor** on **Level 10**. Once you possess it, you have won!
 
-### Steuerung
-*   **Pfeiltasten**: Bewegen und Angreifen (in Gegner hineinbewegen).
-*   **Maus**: Interaktion mit dem UI (Inventar, Logs).
+### Controls
+*   **Arrow Keys**: Move and Attack (move into enemies).
+*   **Mouse**: Interact with UI (Inventory, Logs).
 
-### Mechaniken
-*   **Rundenbasiert**: Die Welt bewegt sich nur, wenn du dich bewegst. Nimm dir Zeit für deine Entscheidungen.
-*   **Klassen**: Wähle zu Beginn zwischen Krieger (mehr HP), Magier (weniger HP) und Schurke.
-*   **Kampf**: Bewege dich auf ein Feld mit einem Gegner, um anzugreifen.
-*   **Ausrüstung**: Finde Waffen und Rüstungen, um stärker zu werden.
-*   **Items**: Nutze Tränke, Schriftrollen und finde Schlüssel für verschlossene Türen.
-*   **Level-Vielfalt**: Erkunde klassische Dungeons und organische Höhlensysteme.
-*   **Gegner**: Verschiedene Gegner haben unterschiedliche Verhaltensweisen. Vorsicht vor dem Drachen auf Level 10!
+### Mechanics
+*   **Turn-based**: The world only moves when you move. Take your time for your decisions.
+*   **Classes**: Choose at the start between Warrior (more HP), Mage (less HP), and Rogue.
+*   **Combat**: Move onto a tile with an enemy to attack.
+*   **Equipment**: Find weapons and armor to become stronger.
+*   **Items**: Use potions, scrolls, and find keys for locked doors.
+*   **Level Variety**: Explore classic dungeons and organic cave systems.
+*   **Enemies**: Different enemies have different behaviors. Beware of the Dragon on Level 10!
 
 ---
 
-## 🛠️ Entwicklungstagebuch
+## 🛠️ Development Diary
 
-Nachfolgend findest du das Protokoll der Entwicklungsphasen dieses Projekts.
+Below you will find the log of the development phases of this project.
 
 ### 1. Game Setup & Core Mechanics
 I successfully wired up the game entry point and verified the core mechanics.

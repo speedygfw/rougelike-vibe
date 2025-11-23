@@ -1,3 +1,5 @@
+import { getRandomTheme } from './Theme.js';
+
 export default class MapGenerator {
     constructor(width, height) {
         this.width = width;
@@ -6,11 +8,14 @@ export default class MapGenerator {
     }
 
     generate() {
+        let map;
         if (Math.random() < 0.5) {
-            return this.generateDungeon();
+            map = this.generateDungeon();
         } else {
-            return this.generateCaves();
+            map = this.generateCaves();
         }
+        map.theme = getRandomTheme();
+        return map;
     }
 
     generateCaves() {

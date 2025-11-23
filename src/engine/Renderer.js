@@ -23,6 +23,11 @@ export default class Renderer {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        const theme = map.theme || {
+            colors: { floor: '#222', wall: '#444', wallText: '#666', floorText: '#333' },
+            chars: { wall: '🧱', floor: '·', door_closed: '🚪', door_open: 'frame' }
+        };
+
         for (let y = 0; y < map.height; y++) {
             for (let x = 0; x < map.width; x++) {
                 const key = `${x},${y}`;
@@ -42,23 +47,54 @@ export default class Renderer {
                 this.ctx.textBaseline = 'middle';
 
                 if (tile === 'wall') {
-                    this.ctx.fillStyle = '#444';
+                    this.ctx.fillStyle = theme.colors.wall;
                     this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = '#666';
-                    this.ctx.fillText('🧱', posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.ctx.fillStyle = theme.colors.wallText;
+                    this.ctx.fillText(theme.chars.wall, posX + this.tileSize / 2, posY + this.tileSize / 2);
                 } else if (tile === 'floor') {
-                    this.ctx.fillStyle = '#222';
+                    this.ctx.fillStyle = theme.colors.floor;
                     this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = '#333';
-                    this.ctx.fillText('·', posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.ctx.fillStyle = theme.colors.floorText;
+                    this.ctx.fillText(theme.chars.floor, posX + this.tileSize / 2, posY + this.tileSize / 2);
                 } else if (tile === 'stairs') {
-                    this.ctx.fillStyle = '#222';
+                    this.ctx.fillStyle = theme.colors.floor;
                     this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
                     this.ctx.fillStyle = '#ffff00';
                     this.ctx.fillText('🪜', posX + this.tileSize / 2, posY + this.tileSize / 2);
+                } else if (tile === 'door_closed') {
+                    this.ctx.fillStyle = theme.colors.floor;
+                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
+                    this.ctx.fillStyle = '#8d6e63';
+                    this.ctx.fillText(theme.chars.door_closed, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                } else if (tile === 'door_open') {
+                    this.ctx.fillStyle = theme.colors.floor;
+                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
+                    if (theme.chars.door_open === 'frame') {
+                        this.ctx.strokeStyle = '#8d6e63';
+                        this.ctx.strokeRect(posX + 2, posY + 2, this.tileSize - 4, this.tileSize - 4);
+                    } else {
+                        this.ctx.fillStyle = '#8d6e63';
+                        this.ctx.fillText(theme.chars.door_open, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    }
                 }
             }
         }
+
+
+        // Draw Props
+        if (map.props) {
+            map.props.forEach(prop => {
+                const key = `${prop.x},${prop.y}`;
+                if (visibleTiles.has(key) || exploredTiles.has(key)) {
+                    const posX = prop.x * this.tileSize;
+                    const posY = prop.y * this.tileSize;
+                    this.ctx.globalAlpha = visibleTiles.has(key) ? 1.0 : 0.3;
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fillText(prop.char, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                }
+            });
+        }
+
         this.ctx.globalAlpha = 1.0;
     }
 

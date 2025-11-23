@@ -15,6 +15,9 @@ export default class Player extends Entity {
             weapon: null,
             armor: null
         };
+        this.mana = 0;
+        this.maxMana = 0;
+        this.spells = [];
 
         if (this.classType === 'warrior') {
             this.maxHp += 20;
@@ -22,6 +25,18 @@ export default class Player extends Entity {
         } else if (this.classType === 'mage') {
             this.maxHp -= 20;
             this.hp = this.maxHp;
+            this.maxMana = 50;
+            this.mana = 50;
+            this.spells = [
+                { name: 'Magic Missile', cost: 10, damage: 15, type: 'damage', range: 5 },
+                { name: 'Minor Heal', cost: 15, heal: 20, type: 'heal' }
+            ];
+        } else if (this.classType === 'rogue') {
+            this.maxMana = 20;
+            this.mana = 20;
+            this.spells = [
+                { name: 'Shadow Step', cost: 15, type: 'teleport', range: 4 }
+            ];
         }
     }
 
@@ -38,6 +53,10 @@ export default class Player extends Entity {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * 1.5);
         this.maxHp += 20;
         this.hp = this.maxHp;
+        if (this.maxMana > 0) {
+            this.maxMana += 10;
+            this.mana = this.maxMana;
+        }
         // Return true or message to log? Handled by Game for now via check
     }
 
