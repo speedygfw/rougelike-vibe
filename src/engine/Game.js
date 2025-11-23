@@ -135,12 +135,19 @@ export default class Game {
             console.log("Found selectionDiv:", selectionDiv);
             console.log("Found cards:", cards.length);
 
+            // Add Keyboard Listener
+            window.addEventListener('keydown', (e) => this.handleInput(e));
+            console.log("Event listener attached");
+
             if (!selectionDiv) {
                 console.error("Critical Error: class-selection element not found!");
                 return;
             }
 
             cards.forEach(card => {
+                // Ensure clickable
+                card.style.pointerEvents = 'auto';
+
                 card.onclick = () => {
                     try {
                         console.log("Card clicked:", card.getAttribute('data-class'));
