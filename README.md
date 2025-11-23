@@ -34,6 +34,8 @@ This project was created as an experiment in collaboration between human and AI.
 
 ## 🎮 How to Play
 
+**[📖 Click here for the Full Game Guide & Bestiary](GAME_GUIDE.md)**
+
 ### Goal
 Your goal is to descend deep into the dungeon and find the **Amulet of Yendor** on **Level 10**. Once you possess it, you have won!
 
