@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { ScrollOfFireball, ScrollOfTeleport } from '../src/entities/Item';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ScrollOfFireball, ScrollOfTeleport, ScrollOfFrostNova, ScrollOfChainLightning, ScrollOfDrainLife, ScrollOfStoneSkin, ScrollOfShadowCloak, ScrollOfTimeWarp, HarmonicCore } from '../src/entities/Item';
 import Enemy from '../src/entities/Enemy';
 
 describe('Items', () => {
@@ -66,6 +66,63 @@ describe('Items', () => {
             expect(player.x).toBe(5);
             expect(player.y).toBe(5);
             expect(game.log).toHaveBeenCalledWith(expect.stringContaining('teleport'), 'magic');
+        });
+    });
+
+    describe('Spell Scrolls', () => {
+        const playerMock = {
+            learnSpell: vi.fn(() => true)
+        };
+        const gameMock = {
+            log: vi.fn()
+        };
+
+        beforeEach(() => {
+            playerMock.learnSpell.mockClear();
+            gameMock.log.mockClear();
+        });
+
+        it('ScrollOfFrostNova should teach Frost Nova', () => {
+            const scroll = new ScrollOfFrostNova(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Frost Nova', type: 'freeze' }));
+        });
+
+        it('ScrollOfChainLightning should teach Chain Lightning', () => {
+            const scroll = new ScrollOfChainLightning(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Chain Lightning', type: 'chain_lightning' }));
+        });
+
+        it('ScrollOfDrainLife should teach Drain Life', () => {
+            const scroll = new ScrollOfDrainLife(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Drain Life', type: 'drain' }));
+        });
+
+        it('ScrollOfStoneSkin should teach Stone Skin', () => {
+            const scroll = new ScrollOfStoneSkin(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Stone Skin', type: 'buff' }));
+        });
+
+        it('ScrollOfShadowCloak should teach Shadow Cloak', () => {
+            const scroll = new ScrollOfShadowCloak(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Shadow Cloak', type: 'invisibility' }));
+        });
+
+        it('ScrollOfTimeWarp should teach Time Warp', () => {
+            const scroll = new ScrollOfTimeWarp(0, 0);
+            scroll.activate(playerMock, gameMock);
+            expect(playerMock.learnSpell).toHaveBeenCalledWith(expect.objectContaining({ name: 'Time Warp', type: 'time_warp' }));
+        });
+    });
+
+    describe('HarmonicCore', () => {
+        it('should trigger victory on use', () => {
+            const core = new HarmonicCore(0, 0);
+            expect(core.use({}, {})).toBe(true);
         });
     });
 });

@@ -102,13 +102,97 @@ export class ScrollOfTeleport extends Scroll {
     }
 }
 
-export class AmuletOfYendor extends Item {
+export class ScrollOfFrostNova extends Scroll {
     constructor(x, y) {
-        super(x, y, 'Amulet of Yendor', '📿', '#ffd700');
+        super(x, y, 'Scroll of Frost Nova', '#00ccff', 'freeze');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Frost Nova', cost: 25, damage: 5, type: 'freeze', range: 3 })) {
+            game.log("You learned Frost Nova!", 'success');
+            return true;
+        }
+        game.log("You already know Frost Nova.", 'warning');
+        return false;
+    }
+}
+
+export class ScrollOfChainLightning extends Scroll {
+    constructor(x, y) {
+        super(x, y, 'Scroll of Chain Lightning', '#ffff00', 'chain_lightning');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Chain Lightning', cost: 30, damage: 20, type: 'chain_lightning', range: 6 })) {
+            game.log("You learned Chain Lightning!", 'success');
+            return true;
+        }
+        game.log("You already know Chain Lightning.", 'warning');
+        return false;
+    }
+}
+
+export class ScrollOfDrainLife extends Scroll {
+    constructor(x, y) {
+        super(x, y, 'Scroll of Drain Life', '#880088', 'drain');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Drain Life', cost: 20, damage: 15, type: 'drain', range: 4 })) {
+            game.log("You learned Drain Life!", 'success');
+            return true;
+        }
+        game.log("You already know Drain Life.", 'warning');
+        return false;
+    }
+}
+
+export class ScrollOfStoneSkin extends Scroll {
+    constructor(x, y) {
+        super(x, y, 'Scroll of Stone Skin', '#888888', 'buff');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Stone Skin', cost: 20, duration: 10, defense: 5, type: 'buff' })) {
+            game.log("You learned Stone Skin!", 'success');
+            return true;
+        }
+        game.log("You already know Stone Skin.", 'warning');
+        return false;
+    }
+}
+
+export class ScrollOfShadowCloak extends Scroll {
+    constructor(x, y) {
+        super(x, y, 'Scroll of Shadow Cloak', '#333333', 'invisibility');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Shadow Cloak', cost: 20, duration: 5, type: 'invisibility' })) {
+            game.log("You learned Shadow Cloak!", 'success');
+            return true;
+        }
+        game.log("You already know Shadow Cloak.", 'warning');
+        return false;
+    }
+}
+
+export class ScrollOfTimeWarp extends Scroll {
+    constructor(x, y) {
+        super(x, y, 'Scroll of Time Warp', '#ff00ff', 'time_warp');
+    }
+    activate(player, game) {
+        if (player.learnSpell({ name: 'Time Warp', cost: 50, turns: 3, type: 'time_warp' })) {
+            game.log("You learned Time Warp!", 'success');
+            return true;
+        }
+        game.log("You already know Time Warp.", 'warning');
+        return false;
+    }
+}
+
+export class HarmonicCore extends Item {
+    constructor(x, y) {
+        super(x, y, 'Harmonic Core', '💠', '#00ffff');
     }
 
     use(player, game) {
-        // Picking up/Using the Amulet triggers victory
+        // Picking up/Using the Core triggers victory
         return true; // Logic handled in Game.js pickup or use
     }
 }

@@ -29,15 +29,46 @@ export default class Player extends Entity {
             this.mana = 50;
             this.spells = [
                 { name: 'Magic Missile', cost: 10, damage: 15, type: 'damage', range: 5 },
-                { name: 'Minor Heal', cost: 15, heal: 20, type: 'heal' }
+                { name: 'Minor Heal', cost: 15, heal: 20, type: 'heal' },
+                { name: 'Frost Nova', cost: 25, damage: 5, type: 'freeze', range: 3 }
             ];
         } else if (this.classType === 'rogue') {
             this.maxMana = 20;
             this.mana = 20;
             this.spells = [
-                { name: 'Shadow Step', cost: 15, type: 'teleport', range: 4 }
+                { name: 'Shadow Step', cost: 15, type: 'teleport', range: 4 },
+                { name: 'Shadow Cloak', cost: 20, duration: 5, type: 'invisibility' }
             ];
         }
+        this.buffs = [];
+    }
+
+    addBuff(buff) {
+        // Check if buff exists, refresh it
+        const existing = this.buffs.find(b => b.type === buff.type);
+        if (existing) {
+            existing.duration = buff.duration;
+            existing.amount = buff.amount; // Update amount if applicable
+        } else {
+            this.buffs.push(buff);
+        }
+    }
+
+    updateBuffs() {
+        this.buffs.forEach(b => b.duration--);
+        this.buffs = this.buffs.filter(b => b.duration > 0);
+    }
+
+    hasBuff(type) {
+        return this.buffs.find(b => b.type === type);
+    }
+
+    learnSpell(spell) {
+        if (!this.spells.find(s => s.name === spell.name)) {
+            this.spells.push(spell);
+            return true;
+        }
+        return false;
     }
 
     gainXp(amount) {
@@ -89,6 +120,10 @@ export default class Player extends Entity {
         let defense = 0;
         if (this.equipment.armor) {
             defense += this.equipment.armor.bonus;
+        }
+        const stoneSkin = this.hasBuff('buff'); // 'buff' type used for Stone Skin
+        if (stoneSkin) {
+            defense += stoneSkin.amount || 0;
         }
         return defense;
     }

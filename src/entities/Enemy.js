@@ -58,8 +58,8 @@ export default class Enemy extends Entity {
             hp = 60;
             faction = 'monster';
         } else if (type === 'dragon') {
-            char = '🐉';
-            color = '#ff0000';
+            char = '🌌'; // Galaxy/Void symbol for Dissonance
+            color = '#800080'; // Purple
             hp = 150;
             faction = 'dragon';
         }
@@ -68,6 +68,7 @@ export default class Enemy extends Entity {
         this.type = type;
         this.hp = hp;
         this.faction = faction;
+        this.frozen = 0;
     }
 
     getAttack() {
@@ -108,6 +109,11 @@ export default class Enemy extends Entity {
     }
 
     takeTurn(player, map, enemies, onAttack) {
+        if (this.frozen > 0) {
+            this.frozen--;
+            return; // Skip turn
+        }
+
         const target = this.findTarget(player, enemies);
         if (!target) return;
 
@@ -165,7 +171,9 @@ export default class Enemy extends Entity {
         let targets = [];
 
         // Player is always a potential target (assume player faction is 'player')
-        if (this.isHostile('player')) {
+        // Check if player is invisible
+        const playerInvisible = player.hasBuff && player.hasBuff('invisibility');
+        if (this.isHostile('player') && !playerInvisible) {
             targets.push(player);
         }
 

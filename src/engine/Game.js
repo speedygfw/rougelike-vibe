@@ -3,7 +3,19 @@ import MapGenerator from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import NPC from '../entities/NPC.js';
-import { Potion, ScrollOfFireball, ScrollOfTeleport, AmuletOfYendor, Key } from '../entities/Item.js';
+import {
+    Potion,
+    ScrollOfFireball,
+    ScrollOfTeleport,
+    ScrollOfFrostNova,
+    ScrollOfChainLightning,
+    ScrollOfDrainLife,
+    ScrollOfStoneSkin,
+    ScrollOfShadowCloak,
+    ScrollOfTimeWarp,
+    HarmonicCore,
+    Key
+} from '../entities/Item.js';
 import { Weapon, Armor } from '../entities/Equipment.js';
 import FOV from './FOV.js';
 import Audio from './Audio.js';
@@ -17,20 +29,19 @@ export default class Game {
         this.inputHandler = new InputHandler();
         this.combatSystem = new CombatSystem(this);
         this.mapGenerator = new MapGenerator(50, 30);
+        this.createSaveControls();
         this.map = null;
         this.player = null;
         this.enemies = [];
         this.items = [];
         this.npcs = [];
         this.isPlayerTurn = true;
-
-        this.fov = null;
+        this.extraTurns = 0;
+        this.turnCount = 0;
         this.visibleTiles = new Set();
         this.exploredTiles = new Set();
         this.fovRadius = 8;
-
         this.gameState = 'PLAYING';
-        this.createSaveControls();
     }
 
     createSaveControls() {
@@ -125,6 +136,12 @@ export default class Game {
         if (data.name.includes('Potion')) return new Potion(data.x, data.y);
         if (data.name.includes('Fireball')) return new ScrollOfFireball(data.x, data.y);
         if (data.name.includes('Teleport')) return new ScrollOfTeleport(data.x, data.y);
+        if (data.name.includes('Frost Nova')) return new ScrollOfFrostNova(data.x, data.y);
+        if (data.name.includes('Chain Lightning')) return new ScrollOfChainLightning(data.x, data.y);
+        if (data.name.includes('Drain Life')) return new ScrollOfDrainLife(data.x, data.y);
+        if (data.name.includes('Stone Skin')) return new ScrollOfStoneSkin(data.x, data.y);
+        if (data.name.includes('Shadow Cloak')) return new ScrollOfShadowCloak(data.x, data.y);
+        if (data.name.includes('Time Warp')) return new ScrollOfTimeWarp(data.x, data.y);
         this.update();
         this.loop();
     }
@@ -141,27 +158,25 @@ export default class Game {
             window.addEventListener('keydown', (e) => this.handleInput(e));
             console.log("Event listener attached");
 
-            if (!selectionDiv) {
-                console.error("Critical Error: class-selection element not found!");
-                return;
-            }
-
-            cards.forEach(card => {
-                // Ensure clickable
-                card.style.pointerEvents = 'auto';
-
-                card.onclick = () => {
-                    try {
-                        console.log("Card clicked:", card.getAttribute('data-class'));
-                        const classType = card.getAttribute('data-class');
-                        if (selectionDiv) selectionDiv.style.display = 'none';
-                        this.startGame(classType);
-                    } catch (e) {
-                        console.error("Error handling card click:", e);
-                        alert("Error starting game: " + e.message);
+            // Event Delegation for Class Selection
+            if (selectionDiv) {
+                selectionDiv.onclick = (e) => {
+                    const card = e.target.closest('.class-card');
+                    if (card) {
+                        try {
+                            console.log("Card clicked:", card.getAttribute('data-class'));
+                            const classType = card.getAttribute('data-class');
+                            selectionDiv.style.display = 'none';
+                            this.startGame(classType);
+                        } catch (err) {
+                            console.error("Error handling card click:", err);
+                            alert("Error starting game: " + err.message);
+                        }
                     }
                 };
-            });
+            } else {
+                console.error("Critical Error: class-selection element not found!");
+            }
 
             // Restart Buttons
             const btnGo = document.getElementById('restart-btn-go');
@@ -213,13 +228,13 @@ export default class Game {
             if (this.player.level === 10) {
                 // Boss Level
                 const center = this.mapGenerator.getCenter(this.map.rooms[this.map.rooms.length - 1]);
-                this.enemies.push(new Enemy(center.x, center.y, 'dragon'));
+                this.enemies.push(new Enemy(center.x, center.y, 'dragon')); // The Dissonance
 
-                // Place Amulet
+                // Place Harmonic Core
                 const amuletPos = this.mapGenerator.getCenter(this.map.rooms[Math.floor(this.map.rooms.length / 2)]);
-                this.items.push(new AmuletOfYendor(amuletPos.x, amuletPos.y));
+                this.items.push(new HarmonicCore(amuletPos.x, amuletPos.y));
 
-                this.log('You feel an ominous presence... The Dragon awaits!', 'important');
+                this.log('You feel a distortion in time... The Dissonance awaits!', 'important');
             } else {
                 for (let i = 1; i < this.map.rooms.length; i++) {
                     const room = this.map.rooms[i];
@@ -258,13 +273,12 @@ export default class Game {
                                 this.items.push(new ScrollOfFireball(ix, iy));
                             } else if (roll < 0.6) {
                                 this.items.push(new ScrollOfTeleport(ix, iy));
-                            } else if (roll < 0.8) {
-                                const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
-                                this.items.push(new Weapon(ix, iy, tier));
-                            } else {
-                                const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
-                                this.items.push(new Armor(ix, iy, tier));
-                            }
+                            } else if (roll < 0.45) this.items.push(new ScrollOfFrostNova(ix, iy));
+                            else if (roll < 0.55) this.items.push(new ScrollOfChainLightning(ix, iy));
+                            else if (roll < 0.65) this.items.push(new ScrollOfDrainLife(ix, iy));
+                            else if (roll < 0.75) this.items.push(new ScrollOfStoneSkin(ix, iy));
+                            else if (roll < 0.85) this.items.push(new ScrollOfShadowCloak(ix, iy));
+                            else this.items.push(new ScrollOfTimeWarp(ix, iy));
                         }
                     }
 
@@ -284,11 +298,11 @@ export default class Game {
                         if (this.map.tiles[ny][nx] === 'floor') {
                             const names = ["Old Man", "Lost Adventurer", "Mysterious Merchant", "Ghostly Guide"];
                             const dialogues = [
-                                "It's dangerous to go alone!",
-                                "I heard there's a dragon on level 10.",
-                                "Have you seen my keys?",
-                                "Beware the shadows...",
-                                "The goblins are restless today."
+                                "The time fracture is growing...",
+                                "The Dissonance feeds on our memories.",
+                                "Seek the Harmonic Core to restore balance.",
+                                "Beware the shadows of the past...",
+                                "Aethelgard was once beautiful..."
                             ];
                             const name = names[Math.floor(Math.random() * names.length)];
                             this.npcs.push(new NPC(nx, ny, name, dialogues));
@@ -440,9 +454,16 @@ export default class Game {
                     if (moved) {
                         this.audio.playFootstep();
                         this.updateFOV();
-                        this.isPlayerTurn = false;
-                        this.update();
-                        setTimeout(() => this.enemyTurn(), 100);
+
+                        if (this.extraTurns > 0) {
+                            this.extraTurns--;
+                            this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
+                            this.update();
+                        } else {
+                            this.isPlayerTurn = false;
+                            this.update();
+                            setTimeout(() => this.enemyTurn(), 100);
+                        }
                     }
                 }
             }
@@ -473,42 +494,118 @@ export default class Game {
         }
 
         let cast = false;
+        let targets = [];
+
+        // Helper to find targets
+        const getEnemiesInRange = (range) => {
+            return this.enemies.filter(e => {
+                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
+                return dist <= range;
+            });
+        };
+
+        const getNearestEnemy = (range) => {
+            let target = null;
+            let minDist = range + 1;
+            this.enemies.forEach(e => {
+                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
+                if (dist <= range && dist < minDist) {
+                    minDist = dist;
+                    target = e;
+                }
+            });
+            return target;
+        };
+
         if (spell.type === 'heal') {
             if (this.player.hp < this.player.maxHp) {
                 this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
                 this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
-                this.renderer.triggerEffect(this.player.x, this.player.y, 'heal'); // Need to add heal effect
+                this.renderer.triggerEffect(this.player.x, this.player.y, 'heal');
                 cast = true;
             } else {
                 this.log("You are already at full health.", 'warning');
             }
         } else if (spell.type === 'damage') {
-            // Find nearest enemy
-            let target = null;
-            let minDist = spell.range + 1;
-            this.enemies.forEach(e => {
-                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
-                if (dist <= spell.range && dist < minDist) {
-                    minDist = dist;
-                    target = e;
-                }
-            });
-
+            const target = getNearestEnemy(spell.range);
             if (target) {
                 target.hp -= spell.damage;
                 this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
-                if (target.hp <= 0) {
-                    this.log(`${target.char} is destroyed! +${target.xpValue || 10} XP`, 'success');
-                    this.player.gainXp(target.xpValue || 10);
-                    this.enemies = this.enemies.filter(e => e !== target);
+                if (target.hp <= 0) targets.push(target); // Mark for cleanup
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'freeze') {
+            const enemies = getEnemiesInRange(spell.range);
+            if (enemies.length > 0) {
+                enemies.forEach(e => {
+                    e.frozen = 3;
+                    this.log(`${e.type} is frozen!`, 'magic');
+                    this.renderer.triggerEffect(e.x, e.y, 'freeze'); // Need freeze effect or generic magic
+                });
+                cast = true;
+            } else {
+                this.log("No enemies in range to freeze.", 'warning');
+            }
+        } else if (spell.type === 'chain_lightning') {
+            let currentTarget = getNearestEnemy(spell.range);
+            if (currentTarget) {
+                let bounces = 3;
+                let damage = spell.damage;
+                let hitEnemies = new Set();
+
+                while (bounces > 0 && currentTarget) {
+                    currentTarget.hp -= damage;
+                    this.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
+                    this.renderer.triggerEffect(currentTarget.x, currentTarget.y, 'hit');
+                    hitEnemies.add(currentTarget);
+                    if (currentTarget.hp <= 0) targets.push(currentTarget);
+
+                    bounces--;
+                    damage = Math.floor(damage * 0.7);
+
+                    // Find next nearest to currentTarget
+                    let nextTarget = null;
+                    let minD = spell.range + 1;
+                    this.enemies.forEach(e => {
+                        if (!hitEnemies.has(e) && e !== currentTarget && e.hp > 0) {
+                            const d = Math.abs(e.x - currentTarget.x) + Math.abs(e.y - currentTarget.y);
+                            if (d <= 4 && d < minD) { // Bounce range 4
+                                minD = d;
+                                nextTarget = e;
+                            }
+                        }
+                    });
+                    currentTarget = nextTarget;
                 }
                 cast = true;
             } else {
                 this.log("No enemy in range.", 'warning');
             }
+        } else if (spell.type === 'drain') {
+            const target = getNearestEnemy(spell.range);
+            if (target) {
+                target.hp -= spell.damage;
+                const heal = Math.floor(spell.damage / 2);
+                this.player.hp = Math.min(this.player.hp + heal, this.player.maxHp);
+                this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
+                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                if (target.hp <= 0) targets.push(target);
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'buff' || spell.type === 'invisibility') {
+            this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
+            this.log(`You cast ${spell.name}!`, 'magic');
+            cast = true;
+        } else if (spell.type === 'time_warp') {
+            this.extraTurns += spell.turns;
+            this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
+            cast = true;
         } else if (spell.type === 'teleport') {
-            // Simple random teleport
             let tx, ty;
             let tries = 0;
             do {
@@ -526,12 +623,30 @@ export default class Game {
             }
         }
 
+        // Cleanup dead enemies
+        if (targets.length > 0) {
+            targets.forEach(t => {
+                if (this.enemies.includes(t)) { // Check if still in list (duplicates from chain lightning)
+                    this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
+                    this.player.gainXp(t.xpValue || 10);
+                }
+            });
+            this.enemies = this.enemies.filter(e => e.hp > 0);
+        }
+
         if (cast) {
             this.player.mana -= spell.cost;
             this.updateUI();
-            this.isPlayerTurn = false;
-            this.update();
-            setTimeout(() => this.enemyTurn(), 100);
+
+            if (this.extraTurns > 0) {
+                this.extraTurns--;
+                this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
+                // Do not end turn
+            } else {
+                this.isPlayerTurn = false;
+                this.update();
+                setTimeout(() => this.enemyTurn(), 100);
+            }
         }
     }
 
@@ -580,7 +695,7 @@ export default class Game {
     useItem(index) {
         const item = this.player.inventory[index];
 
-        if (item instanceof AmuletOfYendor) {
+        if (item instanceof HarmonicCore) {
             this.gameState = 'VICTORY';
             document.getElementById('victory-screen').style.display = 'flex';
             this.audio.playLevelUp();
@@ -617,6 +732,13 @@ export default class Game {
     }
 
     enemyTurn() {
+        if (this.extraTurns > 0) {
+            this.isPlayerTurn = true;
+            return;
+        }
+
+        this.player.updateBuffs();
+
         this.enemies.forEach(enemy => {
             enemy.takeTurn(this.player, this.map, this.enemies, (attackType, target) => {
                 if (target === this.player) {
