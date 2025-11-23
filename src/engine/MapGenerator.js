@@ -23,7 +23,9 @@ export default class MapGenerator {
             width: this.width,
             height: this.height,
             tiles: [],
-            rooms: [] // Caves don't have explicit rooms
+            tiles: [],
+            rooms: [], // Caves don't have explicit rooms
+            props: []
         };
 
         // Initialize with noise
@@ -82,7 +84,9 @@ export default class MapGenerator {
             width: this.width,
             height: this.height,
             tiles: [],
-            rooms: [] // Store rooms for spawning entities later
+            tiles: [],
+            rooms: [], // Store rooms for spawning entities later
+            props: []
         };
 
         // Initialize with walls

@@ -11,7 +11,7 @@ describe('Enemy AI', () => {
             // Mock move
             shaman.move = vi.fn();
 
-            shaman.takeTurn(player, map, vi.fn());
+            shaman.takeTurn(player, map, [], vi.fn());
 
             // Should try to move away. Player is at x+1, so should move x-1
             expect(shaman.move).toHaveBeenCalledWith(-1, 0, map);
@@ -23,9 +23,9 @@ describe('Enemy AI', () => {
             const map = { tiles: Array(20).fill(Array(20).fill('floor')) };
             const onAttack = vi.fn();
 
-            shaman.takeTurn(player, map, onAttack);
+            shaman.takeTurn(player, map, [], onAttack);
 
-            expect(onAttack).toHaveBeenCalledWith('magic');
+            expect(onAttack).toHaveBeenCalledWith('magic', player);
         });
     });
 
@@ -42,9 +42,37 @@ describe('Enemy AI', () => {
             // Force random to be > 0.5 to trigger "moveTowards" twice
             vi.spyOn(Math, 'random').mockReturnValue(0.6);
 
-            bat.takeTurn(player, map, vi.fn());
+            bat.takeTurn(player, map, [], vi.fn());
 
             expect(bat.move).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    describe('Factions', () => {
+        it('should identify hostile factions', () => {
+            const goblin = new Enemy(0, 0, 'goblin'); // monster
+            const skeleton = new Enemy(0, 0, 'skeleton'); // undead
+            const orc = new Enemy(0, 0, 'orc'); // monster
+
+            expect(goblin.isHostile(skeleton.faction)).toBe(true);
+            expect(goblin.isHostile(orc.faction)).toBe(false);
+            expect(goblin.isHostile('player')).toBe(true);
+        });
+
+        it('should target nearest hostile enemy', () => {
+            const goblin = new Enemy(10, 10, 'goblin');
+            const player = { x: 20, y: 20, faction: 'player' }; // Far
+            const skeleton = { x: 11, y: 10, faction: 'undead', hp: 10 }; // Close (dist 1)
+            const orc = { x: 12, y: 10, faction: 'monster', hp: 10 }; // Close (dist 2) but friendly
+
+            const enemies = [skeleton, orc];
+            const map = { tiles: Array(30).fill(Array(30).fill('floor')) };
+            const onAttack = vi.fn();
+
+            goblin.takeTurn(player, map, enemies, onAttack);
+
+            // Should attack skeleton (melee)
+            expect(onAttack).toHaveBeenCalledWith('melee', skeleton);
         });
     });
 });

@@ -2,6 +2,7 @@ import Renderer from './Renderer.js';
 import MapGenerator from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
+import NPC from '../entities/NPC.js';
 import { Potion, ScrollOfFireball, ScrollOfTeleport, AmuletOfYendor, Key } from '../entities/Item.js';
 import { Weapon, Armor } from '../entities/Equipment.js';
 import FOV from './FOV.js';
@@ -20,6 +21,7 @@ export default class Game {
         this.player = null;
         this.enemies = [];
         this.items = [];
+        this.npcs = [];
         this.isPlayerTurn = true;
 
         this.fov = null;
@@ -206,6 +208,7 @@ export default class Game {
             // Spawn Enemies and Items in other rooms
             this.enemies = [];
             this.items = [];
+            this.npcs = [];
 
             if (this.player.level === 10) {
                 // Boss Level
@@ -226,11 +229,19 @@ export default class Game {
                     if (Math.random() < 0.7) {
                         const roll = Math.random();
                         let type = 'goblin';
-                        if (roll < 0.2) type = 'bat';
-                        else if (roll < 0.4) type = 'shaman';
-                        else if (roll < 0.5) type = 'orc';
-                        else if (roll < 0.65) type = 'skeleton';
-                        else if (roll < 0.7) type = 'ogre';
+
+                        // Weighted spawn pool
+                        if (roll < 0.10) type = 'rat';
+                        else if (roll < 0.20) type = 'bat';
+                        else if (roll < 0.30) type = 'spider';
+                        else if (roll < 0.45) type = 'kobold';
+                        else if (roll < 0.60) type = 'goblin';
+                        else if (roll < 0.70) type = 'skeleton';
+                        else if (roll < 0.80) type = 'zombie';
+                        else if (roll < 0.88) type = 'orc';
+                        else if (roll < 0.94) type = 'shaman';
+                        else if (roll < 0.98) type = 'ghost';
+                        else type = 'ogre';
 
                         this.enemies.push(new Enemy(center.x, center.y, type));
                     }
@@ -265,6 +276,24 @@ export default class Game {
                             this.items.push(new Key(kx, ky));
                         }
                     }
+
+                    // Chance to spawn NPC
+                    if (Math.random() < 0.15) {
+                        const nx = Math.floor(Math.random() * room.w) + room.x;
+                        const ny = Math.floor(Math.random() * room.h) + room.y;
+                        if (this.map.tiles[ny][nx] === 'floor') {
+                            const names = ["Old Man", "Lost Adventurer", "Mysterious Merchant", "Ghostly Guide"];
+                            const dialogues = [
+                                "It's dangerous to go alone!",
+                                "I heard there's a dragon on level 10.",
+                                "Have you seen my keys?",
+                                "Beware the shadows...",
+                                "The goblins are restless today."
+                            ];
+                            const name = names[Math.floor(Math.random() * names.length)];
+                            this.npcs.push(new NPC(nx, ny, name, dialogues));
+                        }
+                    }
                 }
 
                 while (this.enemies.length < 3) {
@@ -293,6 +322,7 @@ export default class Game {
             }
             this.enemies = [];
             this.items = [];
+            this.npcs = [];
 
             // Spawn Enemies
             for (let i = 0; i < 6; i++) {
@@ -304,11 +334,18 @@ export default class Game {
 
                 const roll = Math.random();
                 let type = 'goblin';
-                if (roll < 0.2) type = 'bat';
-                else if (roll < 0.4) type = 'shaman';
-                else if (roll < 0.5) type = 'orc';
-                else if (roll < 0.65) type = 'skeleton';
-                else if (roll < 0.7) type = 'ogre';
+
+                if (roll < 0.10) type = 'rat';
+                else if (roll < 0.20) type = 'bat';
+                else if (roll < 0.30) type = 'spider';
+                else if (roll < 0.45) type = 'kobold';
+                else if (roll < 0.60) type = 'goblin';
+                else if (roll < 0.70) type = 'skeleton';
+                else if (roll < 0.80) type = 'zombie';
+                else if (roll < 0.88) type = 'orc';
+                else if (roll < 0.94) type = 'shaman';
+                else if (roll < 0.98) type = 'ghost';
+                else type = 'ogre';
 
                 this.enemies.push(new Enemy(ex, ey, type));
             }
@@ -374,6 +411,15 @@ export default class Game {
                 this.update();
                 setTimeout(() => this.enemyTurn(), 100);
             } else {
+                // Check for NPC
+                const npc = this.npcs.find(n => n.x === targetX && n.y === targetY);
+                if (npc) {
+                    const message = npc.interact();
+                    this.log(`${npc.name}: "${message}"`, 'info');
+                    this.update();
+                    return;
+                }
+
                 const tile = this.map.tiles[targetY][targetX];
                 if (tile === 'door_closed') {
                     const keyIndex = this.player.inventory.findIndex(i => i.name === 'Golden Key');
@@ -490,6 +536,8 @@ export default class Game {
     }
 
     pickupItem() {
+        console.log(`Attempting pickup at ${this.player.x}, ${this.player.y}`);
+        console.log(`Items available:`, this.items.map(i => `${i.name} at ${i.x},${i.y}`));
         const itemIndex = this.items.findIndex(i => i.x === this.player.x && i.y === this.player.y);
         if (itemIndex !== -1) {
             const item = this.items[itemIndex];
@@ -570,25 +618,61 @@ export default class Game {
 
     enemyTurn() {
         this.enemies.forEach(enemy => {
-            enemy.takeTurn(this.player, this.map, (attackType) => {
-                if (attackType === 'magic') {
-                    const damage = 10; // Magic damage
-                    this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
-                    this.player.hp -= damage;
-                    this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
-                } else if (attackType === 'firebreath') {
-                    const damage = 25;
-                    this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
-                    this.player.hp -= damage;
-                    this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
-                } else {
-                    const result = this.combatSystem.resolveAttack(enemy, this.player);
-                    if (result.hit) {
-                        this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
+            enemy.takeTurn(this.player, this.map, this.enemies, (attackType, target) => {
+                if (target === this.player) {
+                    if (attackType === 'magic') {
+                        const damage = 10; // Magic damage
+                        this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
+                        this.player.hp -= damage;
+                        this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                    } else if (attackType === 'firebreath') {
+                        const damage = 25;
+                        this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
+                        this.player.hp -= damage;
                         this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
                     } else {
-                        this.log(`${enemy.char} misses you!`, 'info');
-                        this.audio.playMiss();
+                        const result = this.combatSystem.resolveAttack(enemy, this.player);
+                        if (result.hit) {
+                            this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
+                            this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                        } else {
+                            this.log(`${enemy.char} misses you!`, 'info');
+                            this.audio.playMiss();
+                        }
+                    }
+                } else {
+                    // Enemy vs Enemy
+                    if (attackType === 'magic') {
+                        const damage = 10;
+                        target.hp -= damage;
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${enemy.char} blasts ${target.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(target.x, target.y, 'hit');
+                        }
+                    } else if (attackType === 'firebreath') {
+                        const damage = 25;
+                        target.hp -= damage;
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${enemy.char} burns ${target.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(target.x, target.y, 'hit');
+                        }
+                    } else {
+                        const result = this.combatSystem.resolveAttack(enemy, target);
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            if (result.hit) {
+                                this.log(`${enemy.char} hits ${target.char} for ${result.damage} dmg!`, 'warning');
+                                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                            } else {
+                                // Optional: log misses between enemies? Might spam.
+                            }
+                        }
+                    }
+
+                    if (target.hp <= 0) {
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${target.char} is killed by ${enemy.char}!`, 'success');
+                        }
+                        this.enemies = this.enemies.filter(e => e !== target);
                     }
                 }
             });
@@ -663,6 +747,10 @@ export default class Game {
 
         this.enemies.forEach(enemy => {
             this.renderer.drawEntity(enemy, this.visibleTiles);
+        });
+
+        this.npcs.forEach(npc => {
+            this.renderer.drawEntity(npc, this.visibleTiles);
         });
 
         if (this.player) {
