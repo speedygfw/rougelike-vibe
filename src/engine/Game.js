@@ -342,6 +342,13 @@ export default class Game {
         this.log(`Entered Level ${this.player.level}`, 'important');
     }
 
+    updateFOV() {
+        this.visibleTiles = this.fov.compute(this.player.x, this.player.y, this.fovRadius);
+        this.visibleTiles.forEach(key => {
+            this.exploredTiles.add(key);
+        });
+    }
+
     handleInput(e) {
         if (this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY') {
             if (e.key === 'Enter' || e.key === 'r') {
