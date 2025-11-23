@@ -663,7 +663,50 @@ export default class Game {
 
         this.enemies.forEach(enemy => {
             this.renderer.drawEntity(enemy, this.visibleTiles);
-            restart() {
-                location.reload();
-            }
+        });
+
+        if (this.player) {
+            this.renderer.drawEntity(this.player, this.visibleTiles);
         }
+    }
+
+    updateUI() {
+        if (!this.player) return;
+
+        const hpVal = document.getElementById('hp-val');
+        if (hpVal) hpVal.innerText = `${this.player.hp}/${this.player.maxHp}`;
+
+        const manaEl = document.getElementById('mana-val');
+        if (manaEl) manaEl.innerText = `${this.player.mana}/${this.player.maxMana}`;
+
+        const lvlVal = document.getElementById('lvl-val');
+        if (lvlVal) lvlVal.innerText = this.player.level;
+
+        const atkVal = document.getElementById('atk-val');
+        if (atkVal) atkVal.innerText = this.player.getAttack();
+
+        const defVal = document.getElementById('def-val');
+        if (defVal) defVal.innerText = this.player.getDefense();
+
+        const weaponVal = document.getElementById('weapon-val');
+        if (weaponVal) weaponVal.innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
+
+        const armorVal = document.getElementById('armor-val');
+        if (armorVal) armorVal.innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
+
+        // Update Spells List
+        const spellsList = document.getElementById('spells-list');
+        if (spellsList) {
+            spellsList.innerHTML = '';
+            this.player.spells.forEach((spell, i) => {
+                const li = document.createElement('li');
+                li.innerText = `${i + 1}. ${spell.name} (${spell.cost} MP)`;
+                spellsList.appendChild(li);
+            });
+        }
+    }
+
+    restart() {
+        location.reload();
+    }
+}
