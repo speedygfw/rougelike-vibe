@@ -216,11 +216,20 @@ export default class Game {
         const bindBtn = (id, command) => {
             const btn = document.getElementById(id);
             if (btn) {
-                btn.addEventListener('touchstart', (e) => {
-                    e.preventDefault(); // Prevent ghost clicks
+                const handlePress = (e) => {
+                    if (e.cancelable) e.preventDefault(); // Prevent ghost clicks if possible
+
+                    // Haptic Feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate(10); // Short tick
+                    }
+
                     this.processCommand(command);
-                });
+                };
+
+                btn.addEventListener('touchstart', handlePress, { passive: false });
                 btn.addEventListener('click', (e) => {
+                    // Fallback for non-touch click (e.g. mouse on desktop testing)
                     this.processCommand(command);
                 });
             }

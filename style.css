@@ -529,75 +529,218 @@ button:hover {
   background: rgba(50, 50, 50, 0.8);
 }
 
+font-size: 1.2rem;
+}
+
+/* Class Selection Styles */
+#class-selection {
+  text-align: center;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 12px;
+}
+
+#inventory ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#inventory li {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#inventory li:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+#inventory small {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+#game-over,
+#victory-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 2000;
+  /* High z-index */
+  animation: fadeIn 1s ease-out;
+}
+
+#victory-screen {
+  color: #ffd700;
+}
+
+#game-over h1,
+#victory-screen h1 {
+  font-family: var(--font-header);
+  font-size: 64px;
+  margin: 0 0 24px 0;
+  letter-spacing: 4px;
+  animation: pulse 2s infinite;
+}
+
+#game-over h1 {
+  color: var(--danger-color);
+  text-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+}
+
+#victory-screen h1 {
+  text-shadow: 0 0 20px #ffd700;
+}
+
+#game-over p,
+#victory-screen p {
+  font-size: 20px;
+  color: var(--text-muted);
+  animation: pulse 2s infinite;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.6;
+  }
+}
+
+/* Button Styling */
+button {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border: 1px solid var(--glass-border);
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: var(--font-main);
+  transition: all 0.2s;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-color);
+}
+
+#controls {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 200px;
+  text-align: right;
+  pointer-events: auto;
+}
+
+#controls h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: var(--accent-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.25rem;
+}
+
+#controls p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #ccc;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#controls span {
+  font-size: 1.2rem;
+}
+
+/* Class Selection Styles */
+#class-selection {
+  pointer-events: auto;
+  z-index: 1500;
+  /* High z-index to ensure it's clickable */
+}
+
+.class-card {
+  pointer-events: auto;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.class-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  border-color: #ffd700 !important;
+  background: rgba(50, 50, 50, 0.8);
+}
+
 #story-intro {
   pointer-events: auto;
 }
+
 /* Mobile Controls */
 #mobile-controls {
   display: none;
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   left: 0;
   width: 100%;
+  height: 180px;
+  pointer-events: none;
+  /* Let clicks pass through container */
+  z-index: 1000;
   padding: 0 20px;
   box-sizing: border-box;
-  justify-content: space-between;
-  align-items: flex-end;
-  pointer-events: none; /* Let clicks pass through container */
-  z-index: 1000;
-}
-
-#dpad, #action-buttons {
-  pointer-events: auto; /* Re-enable clicks on buttons */
-}
-
-#dpad {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-.dpad-row {
-  display: flex;
-  gap: 5px;
-}
-
-#dpad button {
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  font-size: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  touch-action: manipulation; /* Prevent double-tap zoom */
-}
-
-#dpad button:active {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-#action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-#action-buttons button {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  font-size: 24px;
-  background: rgba(124, 77, 255, 0.2);
-  border: 1px solid rgba(124, 77, 255, 0.4);
-  touch-action: manipulation;
-}
-
-#action-buttons button:active {
-  background: rgba(124, 77, 255, 0.5);
 }
 
 @media (max-width: 768px) {
@@ -606,12 +749,13 @@ button:hover {
   }
 
   #controls {
-    display: none; /* Hide keyboard instructions on mobile */
+    display: none;
+    /* Hide keyboard instructions on mobile */
   }
-  
+
   #log {
-    height: 100px; /* Smaller log on mobile */
+    height: 100px;
+    /* Smaller log on mobile */
     font-size: 12px;
   }
 }
-

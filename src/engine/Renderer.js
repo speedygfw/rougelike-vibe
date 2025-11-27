@@ -12,6 +12,13 @@ export default class Renderer {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+
+        // Adjust tile size for mobile
+        if (window.innerWidth < 768) {
+            this.tileSize = 48; // Zoom in for mobile
+        } else {
+            this.tileSize = 32; // Standard size for desktop
+        }
     }
 
     clear() {
