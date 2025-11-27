@@ -819,19 +819,23 @@ export default class Game {
                         this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
                         this.player.hp -= damage;
                         this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                        this.renderer.createFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff0000');
                     } else if (attackType === 'firebreath') {
                         const damage = 25;
                         this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
                         this.player.hp -= damage;
                         this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                        this.renderer.createFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff4400');
                     } else {
                         const result = this.combatSystem.resolveAttack(enemy, this.player);
                         if (result.hit) {
                             this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
                             this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                            this.renderer.createFloatingText(this.player.x, this.player.y, `-${result.damage}`, '#ff0000');
                         } else {
                             this.log(`${enemy.char} misses you!`, 'info');
                             this.audio.playMiss();
+                            this.renderer.createFloatingText(this.player.x, this.player.y, "Miss", '#aaa');
                         }
                     }
                 } else {
@@ -842,6 +846,7 @@ export default class Game {
                         if (this.visibleTiles.has(`${target.x},${target.y}`)) {
                             this.log(`${enemy.char} blasts ${target.char} for ${damage} dmg!`, 'warning');
                             this.renderer.triggerEffect(target.x, target.y, 'hit');
+                            this.renderer.createFloatingText(target.x, target.y, `-${damage}`, '#ff9100');
                         }
                     } else if (attackType === 'firebreath') {
                         const damage = 25;
@@ -849,6 +854,7 @@ export default class Game {
                         if (this.visibleTiles.has(`${target.x},${target.y}`)) {
                             this.log(`${enemy.char} burns ${target.char} for ${damage} dmg!`, 'warning');
                             this.renderer.triggerEffect(target.x, target.y, 'hit');
+                            this.renderer.createFloatingText(target.x, target.y, `-${damage}`, '#ff4400');
                         }
                     } else {
                         const result = this.combatSystem.resolveAttack(enemy, target);
@@ -856,8 +862,9 @@ export default class Game {
                             if (result.hit) {
                                 this.log(`${enemy.char} hits ${target.char} for ${result.damage} dmg!`, 'warning');
                                 this.renderer.triggerEffect(target.x, target.y, 'hit');
+                                this.renderer.createFloatingText(target.x, target.y, `-${result.damage}`, '#ff9100');
                             } else {
-                                // Optional: log misses between enemies? Might spam.
+                                // Optional: log misses between enemies?
                             }
                         }
                     }
@@ -871,7 +878,6 @@ export default class Game {
                 }
             });
         });
-
 
         // Mana Regen
         if (this.player.mana < this.player.maxMana) {
@@ -889,6 +895,7 @@ export default class Game {
             this.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
             this.audio.playAttack();
             this.renderer.triggerEffect(enemy.x, enemy.y, 'hit');
+            this.renderer.createFloatingText(enemy.x, enemy.y, `-${result.damage}`, '#ff4444');
 
             if (result.killed) {
                 this.log(`${enemy.char} dies! +10 XP`, 'success');
@@ -900,6 +907,7 @@ export default class Game {
         } else {
             this.log(`You miss ${enemy.char}!`, 'info');
             this.audio.playMiss();
+            this.renderer.createFloatingText(enemy.x, enemy.y, "Miss", '#aaa');
         }
     }
 
@@ -928,6 +936,21 @@ export default class Game {
 
     loop() {
         requestAnimationFrame(() => this.loop());
+
+        // Smooth Movement Interpolation
+        const lerp = (start, end, t) => start + (end - start) * t;
+        const speed = 0.2;
+
+        if (this.player) {
+            this.player.drawX = lerp(this.player.drawX, this.player.x, speed);
+            this.player.drawY = lerp(this.player.drawY, this.player.y, speed);
+        }
+
+        this.enemies.forEach(e => {
+            e.drawX = lerp(e.drawX || e.x, e.x, speed);
+            e.drawY = lerp(e.drawY || e.y, e.y, speed);
+        });
+
         this.draw();
     }
 
@@ -950,6 +973,8 @@ export default class Game {
         if (this.player) {
             this.renderer.drawEntity(this.player, this.visibleTiles);
         }
+
+        this.renderer.drawEffects();
     }
 
     updateUI() {

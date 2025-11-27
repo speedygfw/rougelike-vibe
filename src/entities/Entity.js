@@ -2,6 +2,8 @@ export default class Entity {
     constructor(x, y, char, color) {
         this.x = x;
         this.y = y;
+        this.drawX = x;
+        this.drawY = y;
         this.char = char;
         this.color = color;
     }
