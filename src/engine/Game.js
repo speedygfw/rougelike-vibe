@@ -526,471 +526,469 @@ export default class Game {
             this.toggleInventory();
         } else if (command.type === 'spellbook') {
             this.toggleSpellBook();
-        } else if (command.type === 'restart') {
-            // Handle restart if needed
         } else if (command.type === 'cast') {
             if (command.spellIndex < this.player.spells.length) {
                 this.castSpell(command.spellIndex);
             }
         }
+    }
 
-        toggleSpellBook() {
-            const bookEl = document.getElementById('spell-book');
-            if (bookEl.style.display === 'none' || !bookEl.style.display) {
-                bookEl.style.display = 'block';
-                this.renderSpellBook();
-            } else {
-                bookEl.style.display = 'none';
-            }
-        }
-
-        renderSpellBook() {
-            const list = document.getElementById('spell-list');
-            list.innerHTML = '';
-            if (this.player.spells.length === 0) {
-                list.innerHTML = '<li>No Spells Learned</li>';
-                return;
-            }
-
-            this.player.spells.forEach((spell, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>${index + 1}. ${spell.name}</span> <span style="color: #00b0ff;">${spell.cost} MP</span>`;
-                // Add tooltip or description if possible, for now just list
-                list.appendChild(li);
-            });
-        }
-
-        castSpell(index) {
-            const spell = this.player.spells[index];
-            if (this.player.mana < spell.cost) {
-                this.log(`Not enough mana for ${spell.name}!`, 'warning');
-                return;
-            }
-
-            let cast = false;
-            let targets = [];
-
-            // Helper to find targets
-            const getEnemiesInRange = (range) => {
-                return this.enemies.filter(e => {
-                    const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
-                    return dist <= range;
-                });
-            };
-
-            const getNearestEnemy = (range) => {
-                let target = null;
-                let minDist = range + 1;
-                this.enemies.forEach(e => {
-                    const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
-                    if (dist <= range && dist < minDist) {
-                        minDist = dist;
-                        target = e;
-                    }
-                });
-                return target;
-            };
-
-            if (spell.type === 'heal') {
-                if (this.player.hp < this.player.maxHp) {
-                    this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
-                    this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
-                    this.renderer.triggerEffect(this.player.x, this.player.y, 'heal');
-                    cast = true;
-                } else {
-                    this.log("You are already at full health.", 'warning');
-                }
-            } else if (spell.type === 'damage') {
-                const target = getNearestEnemy(spell.range);
-                if (target) {
-                    target.hp -= spell.damage;
-                    this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
-                    this.renderer.triggerEffect(target.x, target.y, 'hit');
-                    if (target.hp <= 0) targets.push(target); // Mark for cleanup
-                    cast = true;
-                } else {
-                    this.log("No enemy in range.", 'warning');
-                }
-            } else if (spell.type === 'freeze') {
-                const enemies = getEnemiesInRange(spell.range);
-                if (enemies.length > 0) {
-                    enemies.forEach(e => {
-                        e.frozen = 3;
-                        this.log(`${e.type} is frozen!`, 'magic');
-                        this.renderer.triggerEffect(e.x, e.y, 'freeze'); // Need freeze effect or generic magic
-                    });
-                    cast = true;
-                } else {
-                    this.log("No enemies in range to freeze.", 'warning');
-                }
-            } else if (spell.type === 'chain_lightning') {
-                let currentTarget = getNearestEnemy(spell.range);
-                if (currentTarget) {
-                    let bounces = 3;
-                    let damage = spell.damage;
-                    let hitEnemies = new Set();
-
-                    while (bounces > 0 && currentTarget) {
-                        currentTarget.hp -= damage;
-                        this.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
-                        this.renderer.triggerEffect(currentTarget.x, currentTarget.y, 'hit');
-                        hitEnemies.add(currentTarget);
-                        if (currentTarget.hp <= 0) targets.push(currentTarget);
-
-                        bounces--;
-                        damage = Math.floor(damage * 0.7);
-
-                        // Find next nearest to currentTarget
-                        let nextTarget = null;
-                        let minD = spell.range + 1;
-                        this.enemies.forEach(e => {
-                            if (!hitEnemies.has(e) && e !== currentTarget && e.hp > 0) {
-                                const d = Math.abs(e.x - currentTarget.x) + Math.abs(e.y - currentTarget.y);
-                                if (d <= 4 && d < minD) { // Bounce range 4
-                                    minD = d;
-                                    nextTarget = e;
-                                }
-                            }
-                        });
-                        currentTarget = nextTarget;
-                    }
-                    cast = true;
-                } else {
-                    this.log("No enemy in range.", 'warning');
-                }
-            } else if (spell.type === 'drain') {
-                const target = getNearestEnemy(spell.range);
-                if (target) {
-                    target.hp -= spell.damage;
-                    const heal = Math.floor(spell.damage / 2);
-                    this.player.hp = Math.min(this.player.hp + heal, this.player.maxHp);
-                    this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
-                    this.renderer.triggerEffect(target.x, target.y, 'hit');
-                    if (target.hp <= 0) targets.push(target);
-                    cast = true;
-                } else {
-                    this.log("No enemy in range.", 'warning');
-                }
-            } else if (spell.type === 'buff' || spell.type === 'invisibility') {
-                this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
-                this.log(`You cast ${spell.name}!`, 'magic');
-                cast = true;
-            } else if (spell.type === 'time_warp') {
-                this.extraTurns += spell.turns;
-                this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
-                cast = true;
-            } else if (spell.type === 'teleport') {
-                let tx, ty;
-                let tries = 0;
-                do {
-                    tx = Math.floor(Math.random() * this.map.width);
-                    ty = Math.floor(Math.random() * this.map.height);
-                    tries++;
-                } while ((this.map.tiles[ty][tx] === 'wall' || (tx === this.player.x && ty === this.player.y)) && tries < 100);
-
-                if (this.map.tiles[ty][tx] !== 'wall') {
-                    this.player.x = tx;
-                    this.player.y = ty;
-                    this.log("You vanish into the shadows!", 'magic');
-                    this.updateFOV();
-                    cast = true;
-                }
-            }
-
-            // Cleanup dead enemies
-            if (targets.length > 0) {
-                targets.forEach(t => {
-                    if (this.enemies.includes(t)) { // Check if still in list (duplicates from chain lightning)
-                        this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
-                        this.player.gainXp(t.xpValue || 10);
-                    }
-                });
-                this.enemies = this.enemies.filter(e => e.hp > 0);
-            }
-
-            if (cast) {
-                this.player.mana -= spell.cost;
-                this.updateUI();
-
-                if (this.extraTurns > 0) {
-                    this.extraTurns--;
-                    this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
-                    // Do not end turn
-                } else {
-                    this.isPlayerTurn = false;
-                    this.update();
-                    setTimeout(() => this.enemyTurn(), 100);
-                }
-            }
-        }
-
-        pickupItem() {
-            console.log(`Attempting pickup at ${this.player.x}, ${this.player.y}`);
-            console.log(`Items available:`, this.items.map(i => `${i.name} at ${i.x},${i.y}`));
-            const itemIndex = this.items.findIndex(i => i.x === this.player.x && i.y === this.player.y);
-            if (itemIndex !== -1) {
-                const item = this.items[itemIndex];
-                this.player.inventory.push(item);
-                this.items.splice(itemIndex, 1);
-                this.log(`Picked up ${item.name}`, 'pickup');
-                this.audio.playPickup();
-                this.updateUI();
-            } else {
-                this.log("Nothing to pick up here.", 'warning');
-            }
-        }
-
-        toggleInventory() {
-            const invEl = document.getElementById('inventory');
-            if (invEl.style.display === 'none' || !invEl.style.display) {
-                invEl.style.display = 'block';
-                this.renderInventory();
-            } else {
-                invEl.style.display = 'none';
-            }
-        }
-
-        renderInventory() {
-            const list = document.getElementById('inventory-list');
-            list.innerHTML = '';
-            if (this.player.inventory.length === 0) {
-                list.innerHTML = '<li>Empty</li>';
-                return;
-            }
-
-            this.player.inventory.forEach((item, index) => {
-                const li = document.createElement('li');
-                li.innerText = `${index + 1}. ${item.name}`;
-                li.onclick = () => this.useItem(index);
-                list.appendChild(li);
-            });
-        }
-
-        useItem(index) {
-            const item = this.player.inventory[index];
-
-            if (item instanceof HarmonicCore) {
-                this.gameState = 'VICTORY';
-                document.getElementById('victory-screen').style.display = 'flex';
-                this.audio.playLevelUp();
-                return;
-            }
-
-            if (item) {
-                let used = false;
-                if (item.use(this.player, this)) {
-                    used = true;
-                }
-
-                if (used) {
-                    this.log(`Used/Equipped ${item.name}`, 'action');
-                    this.player.inventory.splice(index, 1);
-                    this.renderInventory();
-                    this.updateUI();
-                    this.isPlayerTurn = false;
-                    setTimeout(() => this.enemyTurn(), 100);
-                } else {
-                    this.log(`Cannot use ${item.name} right now.`, 'warning');
-                }
-            }
-        }
-
-        checkStairs() {
-            if (this.map.tiles[this.player.y][this.player.x] === 'stairs') {
-                this.player.level++;
-                this.generateLevel();
-                this.update();
-            } else {
-                this.log("There are no stairs here.", 'warning');
-            }
-        }
-
-        enemyTurn() {
-            if (this.extraTurns > 0) {
-                this.isPlayerTurn = true;
-                return;
-            }
-
-            this.player.updateBuffs();
-
-            this.enemies.forEach(enemy => {
-                enemy.takeTurn(this.player, this.map, this.enemies, (attackType, target) => {
-                    if (target === this.player) {
-                        if (attackType === 'magic') {
-                            const damage = 10; // Magic damage
-                            this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
-                            this.player.hp -= damage;
-                            this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
-                        } else if (attackType === 'firebreath') {
-                            const damage = 25;
-                            this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
-                            this.player.hp -= damage;
-                            this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
-                        } else {
-                            const result = this.combatSystem.resolveAttack(enemy, this.player);
-                            if (result.hit) {
-                                this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
-                                this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
-                            } else {
-                                this.log(`${enemy.char} misses you!`, 'info');
-                                this.audio.playMiss();
-                            }
-                        }
-                    } else {
-                        // Enemy vs Enemy
-                        if (attackType === 'magic') {
-                            const damage = 10;
-                            target.hp -= damage;
-                            if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                                this.log(`${enemy.char} blasts ${target.char} for ${damage} dmg!`, 'warning');
-                                this.renderer.triggerEffect(target.x, target.y, 'hit');
-                            }
-                        } else if (attackType === 'firebreath') {
-                            const damage = 25;
-                            target.hp -= damage;
-                            if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                                this.log(`${enemy.char} burns ${target.char} for ${damage} dmg!`, 'warning');
-                                this.renderer.triggerEffect(target.x, target.y, 'hit');
-                            }
-                        } else {
-                            const result = this.combatSystem.resolveAttack(enemy, target);
-                            if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                                if (result.hit) {
-                                    this.log(`${enemy.char} hits ${target.char} for ${result.damage} dmg!`, 'warning');
-                                    this.renderer.triggerEffect(target.x, target.y, 'hit');
-                                } else {
-                                    // Optional: log misses between enemies? Might spam.
-                                }
-                            }
-                        }
-
-                        if (target.hp <= 0) {
-                            if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                                this.log(`${target.char} is killed by ${enemy.char}!`, 'success');
-                            }
-                            this.enemies = this.enemies.filter(e => e !== target);
-                        }
-                    }
-                });
-            });
-
-
-            // Mana Regen
-            if (this.player.mana < this.player.maxMana) {
-                this.player.mana = Math.min(this.player.mana + 1, this.player.maxMana);
-            }
-
-            this.isPlayerTurn = true;
-            this.update();
-        }
-
-        attackEnemy(enemy) {
-            const result = this.combatSystem.resolveAttack(this.player, enemy);
-
-            if (result.hit) {
-                this.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
-                this.audio.playAttack();
-                this.renderer.triggerEffect(enemy.x, enemy.y, 'hit');
-
-                if (result.killed) {
-                    this.log(`${enemy.char} dies! +10 XP`, 'success');
-                    this.player.gainXp(10);
-                    this.audio.playHit();
-                    // Remove enemy
-                    this.enemies = this.enemies.filter(e => e !== enemy);
-                }
-            } else {
-                this.log(`You miss ${enemy.char}!`, 'info');
-                this.audio.playMiss();
-            }
-        }
-
-        update() {
-            this.draw();
-            this.updateUI();
-
-            if (this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
-                this.gameState = 'GAMEOVER';
-                document.getElementById('game-over').style.display = 'flex';
-                this.log("You have died...", 'important');
-            }
-        }
-
-        log(message, type = 'info') {
-            const logEl = document.getElementById('log');
-            const entry = document.createElement('div');
-            entry.classList.add('log-entry');
-            if (type) entry.classList.add(type);
-            entry.innerText = message;
-            logEl.prepend(entry);
-            if (logEl.children.length > 50) {
-                logEl.removeChild(logEl.lastChild);
-            }
-        }
-
-        loop() {
-            requestAnimationFrame(() => this.loop());
-            this.draw();
-        }
-
-        draw() {
-            this.renderer.clear();
-            this.renderer.drawMap(this.map, this.visibleTiles, this.exploredTiles);
-
-            this.items.forEach(item => {
-                this.renderer.drawEntity(item, this.visibleTiles);
-            });
-
-            this.enemies.forEach(enemy => {
-                this.renderer.drawEntity(enemy, this.visibleTiles);
-            });
-
-            this.npcs.forEach(npc => {
-                this.renderer.drawEntity(npc, this.visibleTiles);
-            });
-
-            if (this.player) {
-                this.renderer.drawEntity(this.player, this.visibleTiles);
-            }
-        }
-
-        updateUI() {
-            if (!this.player) return;
-
-            const hpVal = document.getElementById('hp-val');
-            if (hpVal) hpVal.innerText = `${this.player.hp}/${this.player.maxHp}`;
-
-            const manaEl = document.getElementById('mana-val');
-            if (manaEl) manaEl.innerText = `${this.player.mana}/${this.player.maxMana}`;
-
-            const lvlVal = document.getElementById('lvl-val');
-            if (lvlVal) lvlVal.innerText = this.player.level;
-
-            const atkVal = document.getElementById('atk-val');
-            if (atkVal) atkVal.innerText = this.player.getAttack();
-
-            const defVal = document.getElementById('def-val');
-            if (defVal) defVal.innerText = this.player.getDefense();
-
-            const weaponVal = document.getElementById('weapon-val');
-            if (weaponVal) weaponVal.innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
-
-            const armorVal = document.getElementById('armor-val');
-            if (armorVal) armorVal.innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
-
-            // Update Spells List
-            const spellsList = document.getElementById('spells-list');
-            if (spellsList) {
-                spellsList.innerHTML = '';
-                this.player.spells.forEach((spell, i) => {
-                    const li = document.createElement('li');
-                    li.innerText = `${i + 1}. ${spell.name} (${spell.cost} MP)`;
-                    spellsList.appendChild(li);
-                });
-            }
-        }
-
-        restart() {
-            location.reload();
+    toggleSpellBook() {
+        const bookEl = document.getElementById('spell-book');
+        if (bookEl.style.display === 'none' || !bookEl.style.display) {
+            bookEl.style.display = 'block';
+            this.renderSpellBook();
+        } else {
+            bookEl.style.display = 'none';
         }
     }
+
+    renderSpellBook() {
+        const list = document.getElementById('spell-list');
+        list.innerHTML = '';
+        if (this.player.spells.length === 0) {
+            list.innerHTML = '<li>No Spells Learned</li>';
+            return;
+        }
+
+        this.player.spells.forEach((spell, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${index + 1}. ${spell.name}</span> <span style="color: #00b0ff;">${spell.cost} MP</span>`;
+            list.appendChild(li);
+        });
+    }
+
+    castSpell(index) {
+        const spell = this.player.spells[index];
+        if (this.player.mana < spell.cost) {
+            this.log(`Not enough mana for ${spell.name}!`, 'warning');
+            return;
+        }
+
+        let cast = false;
+        let targets = [];
+
+        // Helper to find targets
+        const getEnemiesInRange = (range) => {
+            return this.enemies.filter(e => {
+                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
+                return dist <= range;
+            });
+        };
+
+        const getNearestEnemy = (range) => {
+            let target = null;
+            let minDist = range + 1;
+            this.enemies.forEach(e => {
+                const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
+                if (dist <= range && dist < minDist) {
+                    minDist = dist;
+                    target = e;
+                }
+            });
+            return target;
+        };
+
+        if (spell.type === 'heal') {
+            if (this.player.hp < this.player.maxHp) {
+                this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
+                this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
+                this.renderer.triggerEffect(this.player.x, this.player.y, 'heal');
+                cast = true;
+            } else {
+                this.log("You are already at full health.", 'warning');
+            }
+        } else if (spell.type === 'damage') {
+            const target = getNearestEnemy(spell.range);
+            if (target) {
+                target.hp -= spell.damage;
+                this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
+                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                if (target.hp <= 0) targets.push(target); // Mark for cleanup
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'freeze') {
+            const enemies = getEnemiesInRange(spell.range);
+            if (enemies.length > 0) {
+                enemies.forEach(e => {
+                    e.frozen = 3;
+                    this.log(`${e.type} is frozen!`, 'magic');
+                    this.renderer.triggerEffect(e.x, e.y, 'freeze'); // Need freeze effect or generic magic
+                });
+                cast = true;
+            } else {
+                this.log("No enemies in range to freeze.", 'warning');
+            }
+        } else if (spell.type === 'chain_lightning') {
+            let currentTarget = getNearestEnemy(spell.range);
+            if (currentTarget) {
+                let bounces = 3;
+                let damage = spell.damage;
+                let hitEnemies = new Set();
+
+                while (bounces > 0 && currentTarget) {
+                    currentTarget.hp -= damage;
+                    this.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
+                    this.renderer.triggerEffect(currentTarget.x, currentTarget.y, 'hit');
+                    hitEnemies.add(currentTarget);
+                    if (currentTarget.hp <= 0) targets.push(currentTarget);
+
+                    bounces--;
+                    damage = Math.floor(damage * 0.7);
+
+                    // Find next nearest to currentTarget
+                    let nextTarget = null;
+                    let minD = spell.range + 1;
+                    this.enemies.forEach(e => {
+                        if (!hitEnemies.has(e) && e !== currentTarget && e.hp > 0) {
+                            const d = Math.abs(e.x - currentTarget.x) + Math.abs(e.y - currentTarget.y);
+                            if (d <= 4 && d < minD) { // Bounce range 4
+                                minD = d;
+                                nextTarget = e;
+                            }
+                        }
+                    });
+                    currentTarget = nextTarget;
+                }
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'drain') {
+            const target = getNearestEnemy(spell.range);
+            if (target) {
+                target.hp -= spell.damage;
+                const heal = Math.floor(spell.damage / 2);
+                this.player.hp = Math.min(this.player.hp + heal, this.player.maxHp);
+                this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
+                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                if (target.hp <= 0) targets.push(target);
+                cast = true;
+            } else {
+                this.log("No enemy in range.", 'warning');
+            }
+        } else if (spell.type === 'buff' || spell.type === 'invisibility') {
+            this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
+            this.log(`You cast ${spell.name}!`, 'magic');
+            cast = true;
+        } else if (spell.type === 'time_warp') {
+            this.extraTurns += spell.turns;
+            this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
+            cast = true;
+        } else if (spell.type === 'teleport') {
+            let tx, ty;
+            let tries = 0;
+            do {
+                tx = Math.floor(Math.random() * this.map.width);
+                ty = Math.floor(Math.random() * this.map.height);
+                tries++;
+            } while ((this.map.tiles[ty][tx] === 'wall' || (tx === this.player.x && ty === this.player.y)) && tries < 100);
+
+            if (this.map.tiles[ty][tx] !== 'wall') {
+                this.player.x = tx;
+                this.player.y = ty;
+                this.log("You vanish into the shadows!", 'magic');
+                this.updateFOV();
+                cast = true;
+            }
+        }
+
+        // Cleanup dead enemies
+        if (targets.length > 0) {
+            targets.forEach(t => {
+                if (this.enemies.includes(t)) { // Check if still in list (duplicates from chain lightning)
+                    this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
+                    this.player.gainXp(t.xpValue || 10);
+                }
+            });
+            this.enemies = this.enemies.filter(e => e.hp > 0);
+        }
+
+        if (cast) {
+            this.player.mana -= spell.cost;
+            this.updateUI();
+
+            if (this.extraTurns > 0) {
+                this.extraTurns--;
+                this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
+                // Do not end turn
+            } else {
+                this.isPlayerTurn = false;
+                this.update();
+                setTimeout(() => this.enemyTurn(), 100);
+            }
+        }
+    }
+
+    pickupItem() {
+        console.log(`Attempting pickup at ${this.player.x}, ${this.player.y}`);
+        console.log(`Items available:`, this.items.map(i => `${i.name} at ${i.x},${i.y}`));
+        const itemIndex = this.items.findIndex(i => i.x === this.player.x && i.y === this.player.y);
+        if (itemIndex !== -1) {
+            const item = this.items[itemIndex];
+            this.player.inventory.push(item);
+            this.items.splice(itemIndex, 1);
+            this.log(`Picked up ${item.name}`, 'pickup');
+            this.audio.playPickup();
+            this.updateUI();
+        } else {
+            this.log("Nothing to pick up here.", 'warning');
+        }
+    }
+
+    toggleInventory() {
+        const invEl = document.getElementById('inventory');
+        if (invEl.style.display === 'none' || !invEl.style.display) {
+            invEl.style.display = 'block';
+            this.renderInventory();
+        } else {
+            invEl.style.display = 'none';
+        }
+    }
+
+    renderInventory() {
+        const list = document.getElementById('inventory-list');
+        list.innerHTML = '';
+        if (this.player.inventory.length === 0) {
+            list.innerHTML = '<li>Empty</li>';
+            return;
+        }
+
+        this.player.inventory.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.innerText = `${index + 1}. ${item.name}`;
+            li.onclick = () => this.useItem(index);
+            list.appendChild(li);
+        });
+    }
+
+    useItem(index) {
+        const item = this.player.inventory[index];
+
+        if (item instanceof HarmonicCore) {
+            this.gameState = 'VICTORY';
+            document.getElementById('victory-screen').style.display = 'flex';
+            this.audio.playLevelUp();
+            return;
+        }
+
+        if (item) {
+            let used = false;
+            if (item.use(this.player, this)) {
+                used = true;
+            }
+
+            if (used) {
+                this.log(`Used/Equipped ${item.name}`, 'action');
+                this.player.inventory.splice(index, 1);
+                this.renderInventory();
+                this.updateUI();
+                this.isPlayerTurn = false;
+                setTimeout(() => this.enemyTurn(), 100);
+            } else {
+                this.log(`Cannot use ${item.name} right now.`, 'warning');
+            }
+        }
+    }
+
+    checkStairs() {
+        if (this.map.tiles[this.player.y][this.player.x] === 'stairs') {
+            this.player.level++;
+            this.generateLevel();
+            this.update();
+        } else {
+            this.log("There are no stairs here.", 'warning');
+        }
+    }
+
+    enemyTurn() {
+        if (this.extraTurns > 0) {
+            this.isPlayerTurn = true;
+            return;
+        }
+
+        this.player.updateBuffs();
+
+        this.enemies.forEach(enemy => {
+            enemy.takeTurn(this.player, this.map, this.enemies, (attackType, target) => {
+                if (target === this.player) {
+                    if (attackType === 'magic') {
+                        const damage = 10; // Magic damage
+                        this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
+                        this.player.hp -= damage;
+                        this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                    } else if (attackType === 'firebreath') {
+                        const damage = 25;
+                        this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
+                        this.player.hp -= damage;
+                        this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                    } else {
+                        const result = this.combatSystem.resolveAttack(enemy, this.player);
+                        if (result.hit) {
+                            this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
+                            this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
+                        } else {
+                            this.log(`${enemy.char} misses you!`, 'info');
+                            this.audio.playMiss();
+                        }
+                    }
+                } else {
+                    // Enemy vs Enemy
+                    if (attackType === 'magic') {
+                        const damage = 10;
+                        target.hp -= damage;
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${enemy.char} blasts ${target.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(target.x, target.y, 'hit');
+                        }
+                    } else if (attackType === 'firebreath') {
+                        const damage = 25;
+                        target.hp -= damage;
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${enemy.char} burns ${target.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(target.x, target.y, 'hit');
+                        }
+                    } else {
+                        const result = this.combatSystem.resolveAttack(enemy, target);
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            if (result.hit) {
+                                this.log(`${enemy.char} hits ${target.char} for ${result.damage} dmg!`, 'warning');
+                                this.renderer.triggerEffect(target.x, target.y, 'hit');
+                            } else {
+                                // Optional: log misses between enemies? Might spam.
+                            }
+                        }
+                    }
+
+                    if (target.hp <= 0) {
+                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                            this.log(`${target.char} is killed by ${enemy.char}!`, 'success');
+                        }
+                        this.enemies = this.enemies.filter(e => e !== target);
+                    }
+                }
+            });
+        });
+
+
+        // Mana Regen
+        if (this.player.mana < this.player.maxMana) {
+            this.player.mana = Math.min(this.player.mana + 1, this.player.maxMana);
+        }
+
+        this.isPlayerTurn = true;
+        this.update();
+    }
+
+    attackEnemy(enemy) {
+        const result = this.combatSystem.resolveAttack(this.player, enemy);
+
+        if (result.hit) {
+            this.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
+            this.audio.playAttack();
+            this.renderer.triggerEffect(enemy.x, enemy.y, 'hit');
+
+            if (result.killed) {
+                this.log(`${enemy.char} dies! +10 XP`, 'success');
+                this.player.gainXp(10);
+                this.audio.playHit();
+                // Remove enemy
+                this.enemies = this.enemies.filter(e => e !== enemy);
+            }
+        } else {
+            this.log(`You miss ${enemy.char}!`, 'info');
+            this.audio.playMiss();
+        }
+    }
+
+    update() {
+        this.draw();
+        this.updateUI();
+
+        if (this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
+            this.gameState = 'GAMEOVER';
+            document.getElementById('game-over').style.display = 'flex';
+            this.log("You have died...", 'important');
+        }
+    }
+
+    log(message, type = 'info') {
+        const logEl = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.classList.add('log-entry');
+        if (type) entry.classList.add(type);
+        entry.innerText = message;
+        logEl.prepend(entry);
+        if (logEl.children.length > 50) {
+            logEl.removeChild(logEl.lastChild);
+        }
+    }
+
+    loop() {
+        requestAnimationFrame(() => this.loop());
+        this.draw();
+    }
+
+    draw() {
+        this.renderer.clear();
+        this.renderer.drawMap(this.map, this.visibleTiles, this.exploredTiles);
+
+        this.items.forEach(item => {
+            this.renderer.drawEntity(item, this.visibleTiles);
+        });
+
+        this.enemies.forEach(enemy => {
+            this.renderer.drawEntity(enemy, this.visibleTiles);
+        });
+
+        this.npcs.forEach(npc => {
+            this.renderer.drawEntity(npc, this.visibleTiles);
+        });
+
+        if (this.player) {
+            this.renderer.drawEntity(this.player, this.visibleTiles);
+        }
+    }
+
+    updateUI() {
+        if (!this.player) return;
+
+        const hpVal = document.getElementById('hp-val');
+        if (hpVal) hpVal.innerText = `${this.player.hp}/${this.player.maxHp}`;
+
+        const manaEl = document.getElementById('mana-val');
+        if (manaEl) manaEl.innerText = `${this.player.mana}/${this.player.maxMana}`;
+
+        const lvlVal = document.getElementById('lvl-val');
+        if (lvlVal) lvlVal.innerText = this.player.level;
+
+        const atkVal = document.getElementById('atk-val');
+        if (atkVal) atkVal.innerText = this.player.getAttack();
+
+        const defVal = document.getElementById('def-val');
+        if (defVal) defVal.innerText = this.player.getDefense();
+
+        const weaponVal = document.getElementById('weapon-val');
+        if (weaponVal) weaponVal.innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
+
+        const armorVal = document.getElementById('armor-val');
+        if (armorVal) armorVal.innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
+
+        // Update Spells List
+        const spellsList = document.getElementById('spells-list');
+        if (spellsList) {
+            spellsList.innerHTML = '';
+            this.player.spells.forEach((spell, i) => {
+                const li = document.createElement('li');
+                li.innerText = `${i + 1}. ${spell.name} (${spell.cost} MP)`;
+                spellsList.appendChild(li);
+            });
+        }
+    }
+
+    restart() {
+        location.reload();
+    }
+}
