@@ -15,11 +15,13 @@ const mockContext = {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
+    closePath: vi.fn(),
     stroke: vi.fn(),
     strokeStyle: '',
     strokeRect: vi.fn(),
     strokeText: vi.fn(),
     arc: vi.fn(),
+    ellipse: vi.fn(),
     fill: vi.fn(),
 };
 

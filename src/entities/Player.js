@@ -3,7 +3,7 @@ import Entity from './Entity.js';
 
 export default class Player extends Entity {
     constructor(x, y, classType = 'warrior') {
-        super(x, y, '@', '#fff');
+        super(x, y, '🧙‍♂️', '#fff');
         this.classType = classType;
         this.hp = 100;
         this.maxHp = 100;

@@ -2,29 +2,52 @@ export default class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.tileSize = 32;
+        this.tileSize = 32; // Represents half-width of the iso tile
         this.effects = [];
         this.cameraX = 0;
         this.cameraY = 0;
+
+        this.textures = {};
+        this.loadTextures();
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
     }
 
+    loadTextures() {
+        if (typeof Image === 'undefined') return; // Skip in test environment
+        const names = ['floor_stone', 'wall_stone', 'wall_stone_top'];
+        names.forEach(name => {
+            const img = new Image();
+            img.src = `/textures/${name}.png`;
+            img.onload = () => {
+                console.log(`Texture loaded: ${name}`);
+                this.textures[name] = this.ctx.createPattern(img, 'repeat');
+                // Force a redraw if possible, or just let the next frame handle it
+            };
+            img.onerror = (e) => {
+                console.error(`Failed to load texture: ${name}`, e);
+            };
+        });
+    }
+
     resize() {
-        this.canvas.width = window.innerWidth || 320;
-        this.canvas.height = window.innerHeight || 480;
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
 
         // Adjust tile size for mobile
-        try {
-            if (window.innerWidth && window.innerWidth < 768) {
-                this.tileSize = 48; // Zoom in for mobile
-            } else {
-                this.tileSize = 32; // Standard size for desktop
-            }
-        } catch (e) {
+        if (window.innerWidth < 768) {
+            this.tileSize = 24;
+        } else {
             this.tileSize = 32;
         }
+    }
+
+    toIso(x, y) {
+        return {
+            x: (x - y) * this.tileSize,
+            y: (x + y) * (this.tileSize / 2)
+        };
     }
 
     clear() {
@@ -33,46 +56,24 @@ export default class Renderer {
     }
 
     updateCamera(player, map) {
+        const iso = this.toIso(player.x, player.y);
+
         // Center camera on player
-        this.cameraX = player.x * this.tileSize - this.canvas.width / 2;
-        this.cameraY = player.y * this.tileSize - this.canvas.height / 2;
-
-        // Clamp to map bounds
-        const mapWidthPx = map.width * this.tileSize;
-        const mapHeightPx = map.height * this.tileSize;
-
-        this.cameraX = Math.max(0, Math.min(this.cameraX, mapWidthPx - this.canvas.width));
-        this.cameraY = Math.max(0, Math.min(this.cameraY, mapHeightPx - this.canvas.height));
-
-        // Center map if smaller than canvas
-        if (mapWidthPx < this.canvas.width) {
-            this.cameraX = -(this.canvas.width - mapWidthPx) / 2;
-        }
-        if (mapHeightPx < this.canvas.height) {
-            this.cameraY = -(this.canvas.height - mapHeightPx) / 2;
-        }
+        this.cameraX = iso.x - this.canvas.width / 2;
+        this.cameraY = iso.y - this.canvas.height / 2;
     }
 
     drawMap(map, visibleTiles, exploredTiles) {
-        this.ctx.fillStyle = '#000';
+        this.ctx.fillStyle = '#050505';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         const theme = map.theme || {
-            colors: { floor: '#222', wall: '#444', wallText: '#666', floorText: '#333' },
-            chars: { wall: '🧱', floor: '·', door_closed: '🚪', door_open: 'frame' }
+            colors: { floor: '#222', wall: '#444', wallTop: '#555' },
         };
 
-        // Calculate visible range based on camera
-        // Calculate visible range based on camera
-        const startX = Math.floor(this.cameraX / this.tileSize);
-        const startY = Math.floor(this.cameraY / this.tileSize);
-        const endX = startX + Math.ceil(this.canvas.width / this.tileSize) + 1;
-        const endY = startY + Math.ceil(this.canvas.height / this.tileSize) + 1;
-
-        for (let y = startY; y < endY; y++) {
-            for (let x = startX; x < endX; x++) {
-                if (x < 0 || x >= map.width || y < 0 || y >= map.height) continue;
-
+        // Render order: back to front (top-left to bottom-right)
+        for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
                 const key = `${x},${y}`;
                 const isVisible = visibleTiles.has(key);
                 const isExplored = exploredTiles.has(key);
@@ -80,79 +81,169 @@ export default class Renderer {
                 if (!isExplored && !isVisible) continue;
 
                 const tile = map.tiles[y][x];
-                const posX = x * this.tileSize - this.cameraX;
-                const posY = y * this.tileSize - this.cameraY;
+                const iso = this.toIso(x, y);
+                const drawX = iso.x - this.cameraX;
+                const drawY = iso.y - this.cameraY;
 
-                // Lighting Effect
-                let alpha = 0.3;
+                // Lighting
+                let alpha = 0.4;
                 if (isVisible) alpha = 1.0;
                 this.ctx.globalAlpha = alpha;
 
-                this.ctx.font = `${this.tileSize}px monospace`;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
+                // Draw Floor
+                this.drawIsoTile(drawX, drawY, theme.colors.floor, this.textures.floor_stone);
 
+                // Draw Walls / Objects
                 if (tile.startsWith('wall')) {
-                    this.ctx.fillStyle = theme.colors.wall;
-                    if (tile === 'wall_mossy') this.ctx.fillStyle = '#3e4a3e';
-                    if (tile === 'wall_cracked') this.ctx.fillStyle = '#333';
-
-                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = theme.colors.wallText;
-                    this.ctx.fillText(theme.chars.wall, posX + this.tileSize / 2, posY + this.tileSize / 2);
-                } else if (tile.startsWith('floor')) {
-                    this.ctx.fillStyle = theme.colors.floor;
-                    if (tile === 'floor_mossy') this.ctx.fillStyle = '#1a261a';
-                    if (tile === 'floor_cracked') this.ctx.fillStyle = '#1a1a1a';
-
-                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = theme.colors.floorText;
-                    this.ctx.fillText(theme.chars.floor, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.drawIsoBlock(drawX, drawY, theme.colors.wall, theme.colors.wallTop, 20, this.textures.wall_stone, this.textures.wall_stone_top);
                 } else if (tile === 'stairs') {
-                    this.ctx.fillStyle = theme.colors.floor;
-                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = '#ffff00';
-                    this.ctx.fillText('🪜', posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.ctx.fillStyle = '#ffd700';
+                    this.ctx.fillText('🪜', drawX, drawY - 10);
                 } else if (tile === 'door_closed') {
-                    this.ctx.fillStyle = theme.colors.floor;
-                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    this.ctx.fillStyle = '#8d6e63';
-                    this.ctx.fillText(theme.chars.door_closed, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.drawIsoBlock(drawX, drawY, '#8d6e63', '#a1887f', 20);
                 } else if (tile === 'door_open') {
-                    this.ctx.fillStyle = theme.colors.floor;
-                    this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
-                    if (theme.chars.door_open === 'frame') {
-                        this.ctx.strokeStyle = '#8d6e63';
-                        this.ctx.strokeRect(posX + 2, posY + 2, this.tileSize - 4, this.tileSize - 4);
-                    } else {
-                        this.ctx.fillStyle = '#8d6e63';
-                        this.ctx.fillText(theme.chars.door_open, posX + this.tileSize / 2, posY + this.tileSize / 2);
+                    this.ctx.fillStyle = '#8d6e63';
+                    this.ctx.fillText('🚪', drawX, drawY - 5);
+                }
+
+                // Props
+                if (map.props) {
+                    const prop = map.props.find(p => p.x === x && p.y === y);
+                    if (prop) {
+                        this.ctx.font = `${this.tileSize}px sans-serif`;
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(prop.char, drawX, drawY - 10);
                     }
                 }
             }
         }
+        this.ctx.globalAlpha = 1.0;
+    }
 
-        // Draw Props
-        if (map.props) {
-            map.props.forEach(prop => {
-                const key = `${prop.x},${prop.y}`;
-                if (visibleTiles.has(key) || exploredTiles.has(key)) {
-                    const posX = prop.x * this.tileSize - this.cameraX;
-                    const posY = prop.y * this.tileSize - this.cameraY;
-                    this.ctx.globalAlpha = visibleTiles.has(key) ? 1.0 : 0.3;
+    drawIsoTile(x, y, color, texture) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - this.tileSize / 2);
+        this.ctx.lineTo(x + this.tileSize, y);
+        this.ctx.lineTo(x, y + this.tileSize / 2);
+        this.ctx.lineTo(x - this.tileSize, y);
+        this.ctx.closePath();
 
-                    if (prop.type === 'torch') this.ctx.fillStyle = '#ff5722';
-                    else if (prop.type === 'grass') this.ctx.fillStyle = '#4caf50';
-                    else if (prop.type === 'rubble') this.ctx.fillStyle = '#8d6e63';
-                    else if (prop.type === 'bones') this.ctx.fillStyle = '#e0e0e0';
-                    else this.ctx.fillStyle = '#fff';
+        if (texture) {
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.fillStyle = texture;
+            this.ctx.fill();
 
-                    this.ctx.fillText(prop.char, posX + this.tileSize / 2, posY + this.tileSize / 2);
-                }
-            });
+            this.ctx.globalCompositeOperation = 'overlay';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.fillStyle = color;
+            this.ctx.fill();
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = color;
+            this.ctx.fill();
         }
 
-        this.ctx.globalAlpha = 1.0;
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        this.ctx.stroke();
+    }
+
+    drawIsoBlock(x, y, colorSide, colorTop, height, textureSide, textureTop) {
+        // Top Face
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - this.tileSize / 2 - height);
+        this.ctx.lineTo(x + this.tileSize, y - height);
+        this.ctx.lineTo(x, y + this.tileSize / 2 - height);
+        this.ctx.lineTo(x - this.tileSize, y - height);
+        this.ctx.closePath();
+
+        if (textureTop) {
+            this.ctx.save();
+            this.ctx.translate(x, y - height);
+            this.ctx.fillStyle = textureTop;
+            this.ctx.fill();
+
+            this.ctx.globalCompositeOperation = 'overlay';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.fillStyle = colorTop;
+            this.ctx.fill();
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = colorTop;
+            this.ctx.fill();
+        }
+
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        this.ctx.stroke();
+
+        // Right Face
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + this.tileSize, y - height);
+        this.ctx.lineTo(x + this.tileSize, y);
+        this.ctx.lineTo(x, y + this.tileSize / 2);
+        this.ctx.lineTo(x, y + this.tileSize / 2 - height);
+        this.ctx.closePath();
+
+        if (textureSide) {
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.fillStyle = textureSide;
+            this.ctx.fill();
+
+            this.ctx.globalCompositeOperation = 'overlay';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.fillStyle = this.shadeColor(colorSide, -20);
+            this.ctx.fill();
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = this.shadeColor(colorSide, -20);
+            this.ctx.fill();
+        }
+
+        // Left Face
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - this.tileSize, y - height);
+        this.ctx.lineTo(x - this.tileSize, y);
+        this.ctx.lineTo(x, y + this.tileSize / 2);
+        this.ctx.lineTo(x, y + this.tileSize / 2 - height);
+        this.ctx.closePath();
+
+        if (textureSide) {
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.fillStyle = textureSide;
+            this.ctx.fill();
+
+            this.ctx.globalCompositeOperation = 'overlay';
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.fillStyle = colorSide;
+            this.ctx.fill();
+            this.ctx.restore();
+        } else {
+            this.ctx.fillStyle = colorSide;
+            this.ctx.fill();
+        }
+    }
+
+    shadeColor(color, percent) {
+        // Simple helper to darken/lighten hex color
+        let R = parseInt(color.substring(1, 3), 16);
+        let G = parseInt(color.substring(3, 5), 16);
+        let B = parseInt(color.substring(5, 7), 16);
+
+        R = parseInt(R * (100 + percent) / 100);
+        G = parseInt(G * (100 + percent) / 100);
+        B = parseInt(B * (100 + percent) / 100);
+
+        R = (R < 255) ? R : 255;
+        G = (G < 255) ? G : 255;
+        B = (B < 255) ? B : 255;
+
+        const RR = ((R.toString(16).length == 1) ? "0" + R.toString(16) : R.toString(16));
+        const GG = ((G.toString(16).length == 1) ? "0" + G.toString(16) : G.toString(16));
+        const BB = ((B.toString(16).length == 1) ? "0" + B.toString(16) : B.toString(16));
+
+        return "#" + RR + GG + BB;
     }
 
     drawMinimap(map, player, exploredTiles) {
@@ -199,16 +290,17 @@ export default class Renderer {
         if (!visibleTiles) return;
         if (!visibleTiles.has(`${entity.x},${entity.y}`)) return;
 
-        const tileSize = this.tileSize;
-        const x = (entity.drawX !== undefined ? entity.drawX : entity.x) * tileSize - this.cameraX;
-        const y = (entity.drawY !== undefined ? entity.drawY : entity.y) * tileSize - this.cameraY;
+        const iso = this.toIso(entity.x, entity.y);
+        const x = iso.x - this.cameraX;
+        const y = iso.y - this.cameraY - 15; // Lift up slightly to stand on tile
 
-        this.ctx.font = `${tileSize * 0.8}px sans-serif`;
+        this.ctx.font = `${this.tileSize * 1.5}px sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
 
         let char = entity.char;
-        if (entity.constructor.name === 'Player') char = '🧙‍♂️';
+        // Robust check for player
+        if (entity.constructor.name === 'Player' || entity.char === '🧙‍♂️') char = '🧙‍♂️';
         else if (entity.constructor.name === 'Potion') char = '🍷';
         else if (entity.constructor.name === 'Weapon') char = '🗡️';
         else if (entity.constructor.name === 'Armor') char = '🛡️';
@@ -221,19 +313,22 @@ export default class Renderer {
         else if (entity.constructor.name === 'NPC') char = '🗣️';
 
         // Shadow
-        this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        this.ctx.fillText(char, x + tileSize / 2 + 2, y + tileSize / 2 + 2);
+        this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x, y + 15, this.tileSize / 2, this.tileSize / 4, 0, 0, Math.PI * 2);
+        this.ctx.fill();
 
         this.ctx.fillStyle = entity.color || '#fff';
-        this.ctx.fillText(char, x + tileSize / 2, y + tileSize / 2);
+        this.ctx.fillText(char, x, y);
     }
 
     createParticle(x, y, type) {
+        const iso = this.toIso(x, y);
         const count = type === 'blood' ? 5 : 10;
         for (let i = 0; i < count; i++) {
             this.effects.push({
-                x: x * this.tileSize + this.tileSize / 2,
-                y: y * this.tileSize + this.tileSize / 2,
+                x: iso.x,
+                y: iso.y - 10,
                 vx: (Math.random() - 0.5) * 4,
                 vy: (Math.random() - 0.5) * 4,
                 life: 30 + Math.random() * 20,
@@ -247,9 +342,10 @@ export default class Renderer {
     }
 
     createFloatingText(x, y, text, color) {
+        const iso = this.toIso(x, y);
         this.effects.push({
-            x: x * this.tileSize + this.tileSize / 2,
-            y: y * this.tileSize,
+            x: iso.x,
+            y: iso.y - 30,
             vx: 0,
             vy: -1,
             life: 60,
