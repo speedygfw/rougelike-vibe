@@ -18,14 +18,14 @@ import {
 } from '../entities/Item.js';
 import { Weapon, Armor } from '../entities/Equipment.js';
 import FOV from './FOV.js';
-import Audio from './Audio.js';
+import AudioSystem from './AudioSystem.js';
 import InputHandler from './InputHandler.js';
 import CombatSystem from './CombatSystem.js';
 
 export default class Game {
     constructor(canvas) {
         this.renderer = new Renderer(canvas);
-        this.audio = new Audio();
+        this.audio = new AudioSystem();
         this.inputHandler = new InputHandler();
         this.combatSystem = new CombatSystem(this);
         this.mapGenerator = new MapGenerator(50, 30);
@@ -142,13 +142,19 @@ export default class Game {
         if (data.name.includes('Stone Skin')) return new ScrollOfStoneSkin(data.x, data.y);
         if (data.name.includes('Shadow Cloak')) return new ScrollOfShadowCloak(data.x, data.y);
         if (data.name.includes('Time Warp')) return new ScrollOfTimeWarp(data.x, data.y);
-        this.update();
-        this.loop();
+        return null;
     }
 
     init() {
         try {
             console.log("Game.init() called");
+
+            // Initialize Audio Context (must be after user interaction)
+            document.addEventListener('click', () => {
+                this.audio.init();
+                this.audio.playTheme('start');
+            }, { once: true });
+
             const selectionDiv = document.getElementById('class-selection');
             const cards = document.querySelectorAll('.class-card');
             console.log("Found selectionDiv:", selectionDiv);
@@ -199,9 +205,36 @@ export default class Game {
             if (btnGo) btnGo.onclick = () => this.restart();
             if (btnVic) btnVic.onclick = () => this.restart();
 
+            this.setupMobileControls();
+
         } catch (e) {
             console.error("Error in Game.init:", e);
         }
+    }
+
+    setupMobileControls() {
+        const bindBtn = (id, command) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault(); // Prevent ghost clicks
+                    this.processCommand(command);
+                });
+                btn.addEventListener('click', (e) => {
+                    this.processCommand(command);
+                });
+            }
+        };
+
+        bindBtn('btn-up', { type: 'move', dx: 0, dy: -1 });
+        bindBtn('btn-down', { type: 'move', dx: 0, dy: 1 });
+        bindBtn('btn-left', { type: 'move', dx: -1, dy: 0 });
+        bindBtn('btn-right', { type: 'move', dx: 1, dy: 0 });
+        bindBtn('btn-wait', { type: 'wait' });
+
+        bindBtn('btn-interact', { type: 'interact' });
+        bindBtn('btn-pickup', { type: 'pickup' });
+        bindBtn('btn-inv', { type: 'inventory' });
     }
 
     startGame(classType) {
@@ -326,8 +359,6 @@ export default class Game {
                 }
 
                 // Guaranteed Key Spawning to prevent soft-locks
-                // If a room has a door, ensure a key is available in the previous room (to enter) 
-                // and/or current room (to exit).
                 const spawnKey = (r) => {
                     const kx = Math.floor(Math.random() * r.w) + r.x;
                     const ky = Math.floor(Math.random() * r.h) + r.y;
@@ -352,11 +383,7 @@ export default class Game {
                     }
 
                     if (hasDoor) {
-                        // Spawn key in previous room (needed to enter this room if door is entrance)
-                        if (i > 0) {
-                            spawnKey(this.map.rooms[i - 1]);
-                        }
-                        // Spawn key in this room (needed to exit this room if door is exit)
+                        if (i > 0) spawnKey(this.map.rooms[i - 1]);
                         spawnKey(room);
                     }
                 }
@@ -442,6 +469,13 @@ export default class Game {
 
         this.updateFOV();
         this.log(`Entered Level ${this.player.level}`, 'important');
+
+        // Update Music based on Level
+        if (this.player.level === 20) {
+            this.audio.playTheme('boss');
+        } else {
+            this.audio.playProceduralTheme(this.player.level);
+        }
     }
 
     updateFOV() {
@@ -459,10 +493,14 @@ export default class Game {
             return;
         }
 
-        if (!this.isPlayerTurn) return;
-
         const command = this.inputHandler.handleKey(e);
-        if (!command) return;
+        if (command) {
+            this.processCommand(command);
+        }
+    }
+
+    processCommand(command) {
+        if (!this.isPlayerTurn) return;
 
         if (command.type === 'move') {
             const targetX = this.player.x + command.dx;
@@ -493,7 +531,7 @@ export default class Game {
                         this.map.tiles[targetY][targetX] = 'door_open';
                         this.player.inventory.splice(keyIndex, 1);
                         this.updateUI();
-                        this.audio.playPickup(); // Reuse sound for now
+                        this.audio.playSound('pickup'); // Reuse sound for now
                         this.isPlayerTurn = false;
                         this.update();
                         setTimeout(() => this.enemyTurn(), 100);
@@ -503,7 +541,7 @@ export default class Game {
                 } else {
                     const moved = this.player.move(command.dx, command.dy, this.map);
                     if (moved) {
-                        this.audio.playFootstep();
+                        this.audio.playSound('step');
                         this.updateFOV();
 
                         if (this.extraTurns > 0) {
@@ -530,6 +568,11 @@ export default class Game {
             if (command.spellIndex < this.player.spells.length) {
                 this.castSpell(command.spellIndex);
             }
+        } else if (command.type === 'wait') {
+            this.log("You wait...", 'info');
+            this.isPlayerTurn = false;
+            this.update();
+            setTimeout(() => this.enemyTurn(), 100);
         }
     }
 
@@ -594,6 +637,7 @@ export default class Game {
                 this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
                 this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
                 this.renderer.triggerEffect(this.player.x, this.player.y, 'heal');
+                this.audio.playSound('magic');
                 cast = true;
             } else {
                 this.log("You are already at full health.", 'warning');
@@ -604,6 +648,7 @@ export default class Game {
                 target.hp -= spell.damage;
                 this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
+                this.audio.playSound('magic');
                 if (target.hp <= 0) targets.push(target); // Mark for cleanup
                 cast = true;
             } else {
@@ -615,8 +660,9 @@ export default class Game {
                 enemies.forEach(e => {
                     e.frozen = 3;
                     this.log(`${e.type} is frozen!`, 'magic');
-                    this.renderer.triggerEffect(e.x, e.y, 'freeze'); // Need freeze effect or generic magic
+                    this.renderer.triggerEffect(e.x, e.y, 'freeze');
                 });
+                this.audio.playSound('magic');
                 cast = true;
             } else {
                 this.log("No enemies in range to freeze.", 'warning');
@@ -652,6 +698,7 @@ export default class Game {
                     });
                     currentTarget = nextTarget;
                 }
+                this.audio.playSound('magic');
                 cast = true;
             } else {
                 this.log("No enemy in range.", 'warning');
@@ -665,6 +712,7 @@ export default class Game {
                 this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
                 if (target.hp <= 0) targets.push(target);
+                this.audio.playSound('magic');
                 cast = true;
             } else {
                 this.log("No enemy in range.", 'warning');
@@ -672,10 +720,12 @@ export default class Game {
         } else if (spell.type === 'buff' || spell.type === 'invisibility') {
             this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
             this.log(`You cast ${spell.name}!`, 'magic');
+            this.audio.playSound('magic');
             cast = true;
         } else if (spell.type === 'time_warp') {
             this.extraTurns += spell.turns;
             this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
+            this.audio.playSound('magic');
             cast = true;
         } else if (spell.type === 'teleport') {
             let tx, ty;
@@ -691,6 +741,7 @@ export default class Game {
                 this.player.y = ty;
                 this.log("You vanish into the shadows!", 'magic');
                 this.updateFOV();
+                this.audio.playSound('magic');
                 cast = true;
             }
         }
@@ -731,7 +782,7 @@ export default class Game {
             this.player.inventory.push(item);
             this.items.splice(itemIndex, 1);
             this.log(`Picked up ${item.name}`, 'pickup');
-            this.audio.playPickup();
+            this.audio.playSound('pickup');
             this.updateUI();
         } else {
             this.log("Nothing to pick up here.", 'warning');
@@ -770,7 +821,7 @@ export default class Game {
         if (item instanceof HarmonicCore) {
             this.gameState = 'VICTORY';
             document.getElementById('victory-screen').style.display = 'flex';
-            this.audio.playLevelUp();
+            this.audio.playSound('level_up');
             return;
         }
 
@@ -834,7 +885,6 @@ export default class Game {
                             this.renderer.createFloatingText(this.player.x, this.player.y, `-${result.damage}`, '#ff0000');
                         } else {
                             this.log(`${enemy.char} misses you!`, 'info');
-                            this.audio.playMiss();
                             this.renderer.createFloatingText(this.player.x, this.player.y, "Miss", '#aaa');
                         }
                     }
@@ -893,20 +943,18 @@ export default class Game {
 
         if (result.hit) {
             this.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
-            this.audio.playAttack();
+            this.audio.playSound('hit');
             this.renderer.triggerEffect(enemy.x, enemy.y, 'hit');
             this.renderer.createFloatingText(enemy.x, enemy.y, `-${result.damage}`, '#ff4444');
 
             if (result.killed) {
                 this.log(`${enemy.char} dies! +10 XP`, 'success');
                 this.player.gainXp(10);
-                this.audio.playHit();
                 // Remove enemy
                 this.enemies = this.enemies.filter(e => e !== enemy);
             }
         } else {
             this.log(`You miss ${enemy.char}!`, 'info');
-            this.audio.playMiss();
             this.renderer.createFloatingText(enemy.x, enemy.y, "Miss", '#aaa');
         }
     }

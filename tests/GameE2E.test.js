@@ -18,6 +18,9 @@ const mockContext = {
     stroke: vi.fn(),
     strokeStyle: '',
     strokeRect: vi.fn(),
+    strokeText: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
 };
 
 const mockCanvas = {

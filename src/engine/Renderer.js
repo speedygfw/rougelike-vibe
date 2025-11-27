@@ -42,26 +42,26 @@ export default class Renderer {
 
                 // Lighting Effect
                 let alpha = 0.3;
-                if (isVisible) {
-                    // Calculate distance from player for torch effect
-                    // We need player position here, but it's not passed directly.
-                    // We can infer it or assume the caller handles the gradient.
-                    // For now, let's keep simple visibility but prepare for gradient.
-                    alpha = 1.0;
-                }
+                if (isVisible) alpha = 1.0;
                 this.ctx.globalAlpha = alpha;
 
                 this.ctx.font = `${this.tileSize}px monospace`;
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
 
-                if (tile === 'wall') {
+                if (tile.startsWith('wall')) {
                     this.ctx.fillStyle = theme.colors.wall;
+                    if (tile === 'wall_mossy') this.ctx.fillStyle = '#3e4a3e';
+                    if (tile === 'wall_cracked') this.ctx.fillStyle = '#333';
+
                     this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
                     this.ctx.fillStyle = theme.colors.wallText;
                     this.ctx.fillText(theme.chars.wall, posX + this.tileSize / 2, posY + this.tileSize / 2);
-                } else if (tile === 'floor') {
+                } else if (tile.startsWith('floor')) {
                     this.ctx.fillStyle = theme.colors.floor;
+                    if (tile === 'floor_mossy') this.ctx.fillStyle = '#1a261a';
+                    if (tile === 'floor_cracked') this.ctx.fillStyle = '#1a1a1a';
+
                     this.ctx.fillRect(posX, posY, this.tileSize, this.tileSize);
                     this.ctx.fillStyle = theme.colors.floorText;
                     this.ctx.fillText(theme.chars.floor, posX + this.tileSize / 2, posY + this.tileSize / 2);
@@ -89,7 +89,6 @@ export default class Renderer {
             }
         }
 
-
         // Draw Props
         if (map.props) {
             map.props.forEach(prop => {
@@ -98,7 +97,13 @@ export default class Renderer {
                     const posX = prop.x * this.tileSize;
                     const posY = prop.y * this.tileSize;
                     this.ctx.globalAlpha = visibleTiles.has(key) ? 1.0 : 0.3;
-                    this.ctx.fillStyle = '#fff';
+
+                    if (prop.type === 'torch') this.ctx.fillStyle = '#ff5722';
+                    else if (prop.type === 'grass') this.ctx.fillStyle = '#4caf50';
+                    else if (prop.type === 'rubble') this.ctx.fillStyle = '#8d6e63';
+                    else if (prop.type === 'bones') this.ctx.fillStyle = '#e0e0e0';
+                    else this.ctx.fillStyle = '#fff';
+
                     this.ctx.fillText(prop.char, posX + this.tileSize / 2, posY + this.tileSize / 2);
                 }
             });
@@ -112,7 +117,6 @@ export default class Renderer {
         if (!visibleTiles.has(`${entity.x},${entity.y}`)) return;
 
         const tileSize = this.tileSize;
-        // Use drawX/drawY for smooth movement if available, else fallback to x/y
         const x = (entity.drawX !== undefined ? entity.drawX : entity.x) * tileSize;
         const y = (entity.drawY !== undefined ? entity.drawY : entity.y) * tileSize;
 

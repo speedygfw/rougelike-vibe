@@ -49,7 +49,14 @@ describe('Player Magic System', () => {
         game.map = { width: 20, height: 20, tiles: Array(20).fill(Array(20).fill('floor')) };
         game.fov = { compute: () => new Set() };
         game.updateFOV = () => { };
-        game.renderer = { triggerEffect: vi.fn(), clear: vi.fn(), drawMap: vi.fn(), drawEntity: vi.fn() };
+        game.renderer = {
+            triggerEffect: vi.fn(),
+            clear: vi.fn(),
+            drawMap: vi.fn(),
+            drawEntity: vi.fn(),
+            createFloatingText: vi.fn(),
+            drawEffects: vi.fn()
+        };
         game.log = vi.fn();
     });
 

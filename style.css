@@ -532,3 +532,86 @@ button:hover {
 #story-intro {
   pointer-events: auto;
 }
+/* Mobile Controls */
+#mobile-controls {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none; /* Let clicks pass through container */
+  z-index: 1000;
+}
+
+#dpad, #action-buttons {
+  pointer-events: auto; /* Re-enable clicks on buttons */
+}
+
+#dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dpad-row {
+  display: flex;
+  gap: 5px;
+}
+
+#dpad button {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: manipulation; /* Prevent double-tap zoom */
+}
+
+#dpad button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#action-buttons button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 24px;
+  background: rgba(124, 77, 255, 0.2);
+  border: 1px solid rgba(124, 77, 255, 0.4);
+  touch-action: manipulation;
+}
+
+#action-buttons button:active {
+  background: rgba(124, 77, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+  #mobile-controls {
+    display: flex;
+  }
+
+  #controls {
+    display: none; /* Hide keyboard instructions on mobile */
+  }
+  
+  #log {
+    height: 100px; /* Smaller log on mobile */
+    font-size: 12px;
+  }
+}
+

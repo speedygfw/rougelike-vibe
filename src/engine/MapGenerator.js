@@ -14,6 +14,7 @@ export default class MapGenerator {
         } else {
             map = this.generateCaves();
         }
+        this.decorateMap(map);
         map.theme = getRandomTheme();
         return map;
     }
@@ -219,5 +220,64 @@ export default class MapGenerator {
             x: Math.floor(room.x + room.w / 2),
             y: Math.floor(room.y + room.h / 2)
         };
+    }
+
+    decorateMap(map) {
+        // Floor Decorations
+        for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+                if (map.tiles[y][x] === 'floor') {
+                    // 5% chance for floor decoration
+                    if (Math.random() < 0.05) {
+                        const rand = Math.random();
+                        let type = 'rubble';
+                        let char = '🪨';
+
+                        if (rand < 0.3) { type = 'bones'; char = '💀'; }
+                        else if (rand < 0.6) { type = 'grass'; char = '🌿'; }
+
+                        // Ensure no entity or item is here (simple check, can be improved)
+                        map.props.push({ x, y, type, char });
+                    }
+                }
+            }
+        }
+
+        // Wall Decorations (Torches)
+        for (let y = 1; y < map.height - 1; y++) {
+            for (let x = 1; x < map.width - 1; x++) {
+                if (map.tiles[y][x] === 'wall') {
+                    // Check if adjacent to floor
+                    let hasFloorNeighbor = false;
+                    const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+                    for (const [dx, dy] of neighbors) {
+                        if (map.tiles[y + dy][x + dx] === 'floor') {
+                            hasFloorNeighbor = true;
+                            break;
+                        }
+                    }
+
+                    if (hasFloorNeighbor && Math.random() < 0.03) {
+                        map.props.push({ x, y, type: 'torch', char: '🔥' });
+                    }
+                }
+            }
+        }
+
+        // Tile Variations
+        for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+                const tile = map.tiles[y][x];
+                if (tile === 'floor') {
+                    const rand = Math.random();
+                    if (rand < 0.1) map.tiles[y][x] = 'floor_cracked';
+                    else if (rand < 0.2) map.tiles[y][x] = 'floor_mossy';
+                } else if (tile === 'wall') {
+                    const rand = Math.random();
+                    if (rand < 0.1) map.tiles[y][x] = 'wall_cracked';
+                    else if (rand < 0.2) map.tiles[y][x] = 'wall_mossy';
+                }
+            }
+        }
     }
 }
