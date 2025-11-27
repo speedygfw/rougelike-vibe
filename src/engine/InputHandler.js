@@ -17,6 +17,11 @@ export default class InputHandler {
         if (e.key === 'b') return { type: 'spellbook' };
         if (e.key === 'r') return { type: 'restart' };
 
+        // Spell Casting
+        if (e.key >= '1' && e.key <= '9') {
+            return { type: 'cast', spellIndex: parseInt(e.key) - 1 };
+        }
+
         return null;
     }
 }
