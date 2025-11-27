@@ -61,65 +61,28 @@ Descend to **Level 20**, defeat **The Dissonance** (Dragon Boss), and retrieve t
 
 ---
 
-## 🛠️ Development Diary
+## 🛠️ Project Milestones
 
-Below you will find the log of the development phases of this project.
+The development of **Mein Roguelike** evolved through several key phases:
 
-### 1. Game Setup & Core Mechanics
-I successfully wired up the game entry point and verified the core mechanics.
+### Phase 1: Core Engine & Mechanics
+*   Built a custom JavaScript engine from scratch (no external libraries).
+*   Implemented turn-based movement, collision detection, and basic combat.
+*   Created a robust Map Generator using Cellular Automata for organic caves and BSP for dungeon rooms.
 
-*   **Entry Point**: Fixed `src/main.js` conflict.
-*   **Mechanics**: Verified movement, map generation, and basic combat.
+### Phase 2: Visuals & UI Overhaul
+*   Designed the "Dark Glass" aesthetic with semi-transparent panels and neon accents.
+*   Integrated `Cinzel` and `Inter` fonts for a premium feel.
+*   Added atmospheric animations (fade-ins, slide-ins) and particle effects.
 
-### 2. UI/UX Overhaul
-I upgraded the game's interface to a premium "Dark Glass" aesthetic.
+### Phase 3: Gameplay Depth
+*   **Class System**: Implemented Warrior, Mage, and Rogue classes with unique starting stats.
+*   **Inventory & Equipment**: Added a full inventory system with tiered weapons, armor, and potions.
+*   **Magic System**: Created a spell casting system with diverse spells (Fireball, Teleport, etc.).
 
-*   **Glassmorphism**: Added semi-transparent backgrounds with blur to UI panels.
-*   **Typography**: Integrated 'Cinzel' (headers) and 'Inter' (body) fonts.
-*   **Animations**: Added fade-in and slide-in effects for logs and menus.
-*   **Styling**: Created a consistent color palette with neon accents.
-
-### 3. Content Expansion
-I added depth to the gameplay with new items, enemies, and equipment.
-
-*   **New Features**:
-    *   **Scrolls**: Added `ScrollOfFireball` (AOE damage) and `ScrollOfTeleport` (Escape).
-    *   **Advanced AI**:
-        *   Shaman: Casts ranged spells and flees if too close.
-        *   Bat: Moves faster/erratically.
-    *   **Tiered Equipment**: Weapons and Armor now have tiers (e.g., Rusty Dagger -> Mithril Blade) that scale with player level.
-
-### 4. Testing & Refactoring
-I established a robust testing environment to ensure game stability.
-
-*   **Refactoring**: Moved all tests to a dedicated `tests/` directory for better organization.
-*   **New Tests**: Added unit tests for Scrolls (Fireball/Teleport) and Enemy AI (Shaman fleeing/Bat movement).
-*   **Verification**: Ran the full test suite with vitest, confirming all 59 tests pass.
-
-### 5. Endgame Content
-I implemented the final challenge and victory condition for the game.
-
-*   **Boss Battle**: Added a Dragon enemy that spawns at Level 10.
-    *   High HP (150) and Attack (20).
-    *   Special 'Firebreath' attack (25 damage) when aligned with the player.
-*   **Win Condition**: Added the Amulet of Yendor.
-    *   Spawns on Level 10.
-    *   Picking it up or using it triggers the Victory state.
-*   **Victory Screen**: A dedicated screen to celebrate the player's success.
-
-### 6. Feature Expansion & Polish
-I implemented major gameplay features to increase variety and replayability.
-
-*   **Character Classes**: Added a class selection screen (Warrior, Rogue, Mage) impacting starting stats.
-*   **Doors & Keys**: Added locked doors and keys to dungeon generation.
-*   **Varied Levels**: Implemented Cellular Automata for Cave generation, mixing up the level styles.
-*   **Polish**: Refined the UI and added comprehensive unit tests for all new features.
-
-### 7. Story & Expansion Update
-I integrated a narrative layer and expanded the game's scope.
-
-*   **Story**: Added "The Echoes of Aethelgard" intro and enhanced ending texts.
-*   **Expansion**: Increased dungeon depth to **20 Levels**.
-*   **NPCs**: Added friendly NPCs with dialogue to flesh out the world.
-*   **Spell Book**: Added a dedicated UI ('B') to view and manage spells.
-*   **Quality of Life**: Guaranteed key drops to prevent soft-locks.
+### Phase 4: The "Echoes" Expansion
+*   **Story Integration**: Added the "Echoes of Aethelgard" narrative, including intro/outro screens and lore.
+*   **World Expansion**: Increased dungeon size to **20 Levels** with a dedicated Boss fight at the end.
+*   **Living World**: Introduced friendly NPCs, enemy factions, and guaranteed key drops.
+*   **Spell Book**: Added a dedicated UI for managing learned spells.
+*   **Quality Assurance**: Verified stability with a comprehensive suite of **59 automated tests**.
