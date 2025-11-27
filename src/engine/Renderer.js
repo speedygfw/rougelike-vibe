@@ -147,6 +147,7 @@ export default class Renderer {
     }
 
     drawMinimap(map, player, exploredTiles) {
+        if (!map || !player) return;
         const minimapCanvas = document.getElementById('minimap');
         if (!minimapCanvas) return;
 
