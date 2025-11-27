@@ -3,8 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/rougelike-vibe/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="description"
     content="A classic roguelike dungeon crawler built with JavaScript and HTML5 Canvas. Explore, fight, and survive!" />
   <title>Mein Roguelike - Dungeon Crawler</title>
@@ -12,18 +12,33 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap"
     rel="stylesheet">
-  <script type="module" crossorigin src="./assets/index-X7oU1A4a.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-IPvGzZbg.css">
+  <script type="module" crossorigin src="/rougelike-vibe/assets/index-DSeyspmY.js"></script>
+  <link rel="stylesheet" crossorigin href="/rougelike-vibe/assets/index-DhzaH9-U.css">
 </head>
 
 <body>
+  <script>
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      alert('Global Error: ' + msg + '\nLine: ' + lineNo + '\nStack: ' + (error ? error.stack : 'n/a'));
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+      alert('Unhandled Rejection: ' + event.reason);
+    });
+  </script>
   <div id="app">
     <canvas id="gameCanvas"></canvas>
     <div id="ui-layer">
       <div id="stats" class="glass-panel">
         <div class="stat-row"><span class="label">HP:</span> <span id="hp-val">100/100</span></div>
+        <div class="stat-row"><span class="label">MP:</span> <span id="mana-val">10/10</span></div>
         <div class="stat-row"><span class="label">Lvl:</span> <span id="lvl-val">1</span></div>
+        <div class="stat-row"><span class="label">Atk:</span> <span id="atk-val">5</span></div>
+        <div class="stat-row"><span class="label">Def:</span> <span id="def-val">0</span></div>
+        <div class="stat-row"><span class="label">Wpn:</span> <span id="weapon-val">None</span></div>
+        <div class="stat-row"><span class="label">Arm:</span> <span id="armor-val">None</span></div>
       </div>
+      <canvas id="minimap" width="150" height="150" class="glass-panel"></canvas>
       <div id="controls">
         <h3>Controls</h3>
         <p>Move / Attack <span>Arrow Keys</span></p>
@@ -39,16 +54,78 @@
         <ul id="inventory-list"></ul>
         <small>Click to use</small>
       </div>
+      <div id="spell-book" class="glass-panel" style="display: none;">
+        <h3>Spell Book</h3>
+        <ul id="spell-list"></ul>
+        <small>Press 1-9 to Cast</small>
+      </div>
       <div id="game-over" style="display: none;">
-        <h1>GAME OVER</h1>
-        <p>Press Enter to Restart</p>
+        <h1 style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">GAME OVER</h1>
+        <p>Your timeline ends here.</p>
+        <p>Another echo lost to the void.</p>
+        <p style="margin-top: 20px; color: #888;">Press Enter to Restart</p>
         <button id="restart-btn-go" style="margin-top: 20px;">Restart</button>
       </div>
       <div id="victory-screen" style="display: none;">
-        <h1>VICTORY!</h1>
-        <p>You have retrieved the Amulet of Yendor!</p>
-        <p>Press Enter to Play Again</p>
+        <h1 style="color: #ffd700; text-shadow: 0 0 10px #ffd700;">VICTORY!</h1>
+        <p>You hold the Harmonic Core aloft.</p>
+        <p>The Dissonance screams and shatters into a thousand fading memories.</p>
+        <p>Time begins to mend. Aethelgard is safe... for now.</p>
+        <p style="margin-top: 20px; color: #888;">Press Enter to Play Again</p>
         <button id="restart-btn-vic" style="margin-top: 20px;">Play Again</button>
+      </div>
+
+      <div id="story-intro" class="glass-panel"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 300; background: #000; text-align: center; padding: 2rem;">
+        <h1 style="color: #a020f0; text-shadow: 0 0 15px #a020f0; margin-bottom: 30px; font-family: 'Cinzel', serif;">
+          The Echoes of Aethelgard</h1>
+        <p style="max-width: 600px; line-height: 1.6; margin-bottom: 20px; font-size: 1.2rem; color: #ccc;">
+          The realm of Aethelgard has fractured. Time itself is unraveling, consumed by <strong>The
+            Dissonance</strong>.<br><br>
+          You are a traveler from beyond the veil, seeking the <strong>Harmonic Core</strong> to restore
+          balance.<br><br>
+          But beware... the echoes of the past are not always friendly.
+        </p>
+        <p style="color: #666; margin-top: 40px; animation: pulse 2s infinite;">[ Click to Begin ]</p>
+      </div>
+
+      <div id="class-selection" class="glass-panel"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 200; background: rgba(0,0,0,0.9);">
+        <h1>Choose Your Class</h1>
+        <div style="display: flex; gap: 24px; margin-top: 40px; flex-wrap: wrap; justify-content: center;">
+          <div class="class-card" data-class="warrior">
+            <h2>Warrior</h2>
+            <div style="font-size: 48px;">⚔️</div>
+            <p>High HP, starts with Sword</p>
+          </div>
+          <div class="class-card" data-class="rogue">
+            <h2>Rogue</h2>
+            <div style="font-size: 48px;">🗡️</div>
+            <p>Agile, starts with Dagger & Key</p>
+          </div>
+          <div class="class-card" data-class="mage">
+            <h2>Mage</h2>
+            <div style="font-size: 48px;">📜</div>
+            <p>Fragile, starts with Fireball</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-controls">
+        <div id="dpad">
+          <button id="btn-up">▲</button>
+          <div class="dpad-row">
+            <button id="btn-left">◀</button>
+            <button id="btn-wait">Wait</button>
+            <button id="btn-right">▶</button>
+          </div>
+          <button id="btn-down">▼</button>
+        </div>
+        <div id="action-buttons">
+          <button id="btn-interact">🖐️</button>
+          <button id="btn-pickup">🎒</button>
+          <button id="btn-inv">📦</button>
+        </div>
       </div>
     </div>
   </div>

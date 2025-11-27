@@ -1,5 +1,5 @@
 import Renderer from './Renderer.js';
-import MapGenerator from './MapGenerator.js';
+import MapGenerator, { MapData, Room } from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import NPC from '../entities/NPC.js';
@@ -14,7 +14,8 @@ import {
     ScrollOfShadowCloak,
     ScrollOfTimeWarp,
     HarmonicCore,
-    Key
+    Key,
+    Item
 } from '../entities/Item.js';
 import { Weapon, Armor } from '../entities/Equipment.js';
 import FOV from './FOV.js';
@@ -23,7 +24,27 @@ import InputHandler from './InputHandler.js';
 import CombatSystem from './CombatSystem.js';
 
 export default class Game {
-    constructor(canvas) {
+    renderer: Renderer;
+    audio: AudioSystem;
+    inputHandler: InputHandler;
+    combatSystem: CombatSystem;
+    mapGenerator: MapGenerator;
+    map: MapData | null;
+    player: Player | null;
+    enemies: Enemy[];
+    items: Item[];
+    npcs: NPC[];
+    isPlayerTurn: boolean;
+    extraTurns: number;
+    turnCount: number;
+    visibleTiles: Set<string>;
+    exploredTiles: Set<string>;
+    fovRadius: number;
+    gameState: 'PLAYING' | 'GAMEOVER' | 'VICTORY';
+    fov: FOV | null;
+    playerClass: string;
+
+    constructor(canvas: HTMLCanvasElement) {
         this.renderer = new Renderer(canvas);
         this.audio = new AudioSystem();
         this.inputHandler = new InputHandler();
@@ -42,6 +63,8 @@ export default class Game {
         this.exploredTiles = new Set();
         this.fovRadius = 8;
         this.gameState = 'PLAYING';
+        this.fov = null;
+        this.playerClass = 'warrior';
     }
 
     createSaveControls() {
@@ -49,6 +72,8 @@ export default class Game {
     }
 
     saveGame() {
+        if (!this.player || !this.map) return;
+
         const data = {
             map: this.map,
             player: {
@@ -82,36 +107,40 @@ export default class Game {
 
         // Restore Map
         this.map = data.map;
-        this.mapGenerator.width = this.map.width;
-        this.mapGenerator.height = this.map.height;
+        if (this.map) {
+            this.mapGenerator.width = this.map.width;
+            this.mapGenerator.height = this.map.height;
+        }
 
         // Restore Player
-        this.player = new Player(data.player.x, data.player.y);
+        this.player = new Player(data.player.x, data.player.y, 'warrior'); // Default class, overwritten below
         Object.assign(this.player, data.player);
-        this.player.inventory = data.player.inventory.map(i => this.hydrateItem(i));
-        if (this.player.equipment.weapon) this.player.equipment.weapon = this.hydrateItem(this.player.equipment.weapon);
-        if (this.player.equipment.armor) this.player.equipment.armor = this.hydrateItem(this.player.equipment.armor);
+        this.player.inventory = data.player.inventory.map((i: any) => this.hydrateItem(i));
+        if (this.player.equipment.weapon) this.player.equipment.weapon = this.hydrateItem(this.player.equipment.weapon) as Weapon;
+        if (this.player.equipment.armor) this.player.equipment.armor = this.hydrateItem(this.player.equipment.armor) as Armor;
 
         // Restore Enemies
-        this.enemies = data.enemies.map(e => {
+        this.enemies = data.enemies.map((e: any) => {
             const enemy = new Enemy(e.x, e.y, e.type);
             enemy.hp = e.hp;
             return enemy;
         });
 
         // Restore Items
-        this.items = data.items.map(i => this.hydrateItem(i));
+        this.items = data.items.map((i: any) => this.hydrateItem(i)).filter((i: any) => i !== null) as Item[];
 
         // Restore FOV
         this.exploredTiles = new Set(data.exploredTiles);
-        this.fov = new FOV(this.map);
-        this.updateFOV();
+        if (this.map) {
+            this.fov = new FOV(this.map);
+            this.updateFOV();
+        }
 
         this.log("Game Loaded!", 'success');
         this.update();
     }
 
-    hydrateItem(data) {
+    hydrateItem(data: any) {
         if (!data) return null;
         if (data.slot) {
             if (data.slot === 'weapon') return new Weapon(data.x, data.y, data.bonus < 5 ? 1 : (data.bonus < 8 ? 2 : 3));
@@ -165,15 +194,18 @@ export default class Game {
 
             // Event Delegation for Class Selection
             if (selectionDiv) {
-                selectionDiv.onclick = (e) => {
-                    const card = e.target.closest('.class-card');
+                selectionDiv.onclick = (e: MouseEvent) => {
+                    const target = e.target as HTMLElement;
+                    const card = target.closest('.class-card');
                     if (card) {
                         try {
                             console.log("Card clicked:", card.getAttribute('data-class'));
                             const classType = card.getAttribute('data-class');
-                            selectionDiv.style.display = 'none';
-                            this.startGame(classType);
-                        } catch (err) {
+                            if (classType) {
+                                selectionDiv.style.display = 'none';
+                                this.startGame(classType);
+                            }
+                        } catch (err: any) {
                             console.error("Error handling card click:", err);
                             alert("Error starting game: " + err.message);
                         }
@@ -197,10 +229,10 @@ export default class Game {
     }
 
     setupMobileControls() {
-        const bindBtn = (id, command) => {
+        const bindBtn = (id: string, command: any) => {
             const btn = document.getElementById(id);
             if (btn) {
-                const handlePress = (e) => {
+                const handlePress = (e: TouchEvent) => {
                     if (e.cancelable) e.preventDefault(); // Prevent ghost clicks if possible
 
                     // Haptic Feedback
@@ -234,14 +266,14 @@ export default class Game {
         bindBtn('btn-inv', { type: 'inventory' });
     }
 
-    startGame(classType) {
+    startGame(classType: string) {
         try {
             console.log("Starting game with class:", classType);
             this.playerClass = classType;
             this.generateLevel();
             this.update();
             this.loop();
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error in startGame:", e);
             alert("Critical Game Error: " + e.message);
         }
@@ -249,7 +281,8 @@ export default class Game {
 
     generateLevel() {
         // Generate Map
-        this.map = this.mapGenerator.generate();
+        const map = this.mapGenerator.generate();
+        this.map = map;
         this.fov = new FOV(this.map);
         this.exploredTiles.clear();
 
@@ -356,10 +389,10 @@ export default class Game {
                 }
 
                 // Guaranteed Key Spawning to prevent soft-locks
-                const spawnKey = (r) => {
+                const spawnKey = (r: Room) => {
                     const kx = Math.floor(Math.random() * r.w) + r.x;
                     const ky = Math.floor(Math.random() * r.h) + r.y;
-                    if (this.map.tiles[ky][kx] === 'floor') {
+                    if (map.tiles[ky][kx] === 'floor') {
                         this.items.push(new Key(kx, ky));
                     }
                 };
@@ -476,13 +509,14 @@ export default class Game {
     }
 
     updateFOV() {
+        if (!this.player || !this.fov) return;
         this.visibleTiles = this.fov.compute(this.player.x, this.player.y, this.fovRadius);
         this.visibleTiles.forEach(key => {
             this.exploredTiles.add(key);
         });
     }
 
-    handleInput(e) {
+    handleInput(e: KeyboardEvent) {
         if (this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY') {
             if (e.key === 'Enter' || e.key === 'r') {
                 this.restart();
@@ -496,8 +530,8 @@ export default class Game {
         }
     }
 
-    processCommand(command) {
-        if (!this.isPlayerTurn) return;
+    processCommand(command: any) {
+        if (!this.isPlayerTurn || !this.player || !this.map) return;
 
         if (command.type === 'move') {
             const targetX = this.player.x + command.dx;
@@ -575,16 +609,20 @@ export default class Game {
 
     toggleSpellBook() {
         const bookEl = document.getElementById('spell-book');
-        if (bookEl.style.display === 'none' || !bookEl.style.display) {
-            bookEl.style.display = 'block';
-            this.renderSpellBook();
-        } else {
-            bookEl.style.display = 'none';
+        if (bookEl) {
+            if (bookEl.style.display === 'none' || !bookEl.style.display) {
+                bookEl.style.display = 'block';
+                this.renderSpellBook();
+            } else {
+                bookEl.style.display = 'none';
+            }
         }
     }
 
     renderSpellBook() {
+        if (!this.player) return;
         const list = document.getElementById('spell-list');
+        if (!list) return;
         list.innerHTML = '';
         if (this.player.spells.length === 0) {
             list.innerHTML = '<li>No Spells Learned</li>';
@@ -598,7 +636,8 @@ export default class Game {
         });
     }
 
-    castSpell(index) {
+    castSpell(index: number) {
+        if (!this.player || !this.map) return;
         const spell = this.player.spells[index];
         if (this.player.mana < spell.cost) {
             this.log(`Not enough mana for ${spell.name}!`, 'warning');
@@ -606,20 +645,24 @@ export default class Game {
         }
 
         let cast = false;
-        let targets = [];
+        let targets: Enemy[] = [];
 
         // Helper to find targets
-        const getEnemiesInRange = (range) => {
+        const getEnemiesInRange = (range: number) => {
+            if (!this.player) return [];
             return this.enemies.filter(e => {
+                if (!this.player) return false;
                 const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
                 return dist <= range;
             });
         };
 
-        const getNearestEnemy = (range) => {
-            let target = null;
+        const getNearestEnemy = (range: number): Enemy | null => {
+            if (!this.player) return null;
+            let target: Enemy | null = null;
             let minDist = range + 1;
             this.enemies.forEach(e => {
+                if (!this.player) return;
                 const dist = Math.abs(e.x - this.player.x) + Math.abs(e.y - this.player.y);
                 if (dist <= range && dist < minDist) {
                     minDist = dist;
@@ -629,7 +672,7 @@ export default class Game {
             return target;
         };
 
-        if (spell.type === 'heal') {
+        if (spell.type === 'heal' && spell.heal) {
             if (this.player.hp < this.player.maxHp) {
                 this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
                 this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
@@ -639,7 +682,7 @@ export default class Game {
             } else {
                 this.log("You are already at full health.", 'warning');
             }
-        } else if (spell.type === 'damage') {
+        } else if (spell.type === 'damage' && spell.damage && spell.range) {
             const target = getNearestEnemy(spell.range);
             if (target) {
                 target.hp -= spell.damage;
@@ -651,7 +694,7 @@ export default class Game {
             } else {
                 this.log("No enemy in range.", 'warning');
             }
-        } else if (spell.type === 'freeze') {
+        } else if (spell.type === 'freeze' && spell.range) {
             const enemies = getEnemiesInRange(spell.range);
             if (enemies.length > 0) {
                 enemies.forEach(e => {
@@ -664,12 +707,12 @@ export default class Game {
             } else {
                 this.log("No enemies in range to freeze.", 'warning');
             }
-        } else if (spell.type === 'chain_lightning') {
+        } else if (spell.type === 'chain_lightning' && spell.damage && spell.range) {
             let currentTarget = getNearestEnemy(spell.range);
             if (currentTarget) {
                 let bounces = 3;
                 let damage = spell.damage;
-                let hitEnemies = new Set();
+                let hitEnemies = new Set<Enemy>();
 
                 while (bounces > 0 && currentTarget) {
                     currentTarget.hp -= damage;
@@ -682,10 +725,10 @@ export default class Game {
                     damage = Math.floor(damage * 0.7);
 
                     // Find next nearest to currentTarget
-                    let nextTarget = null;
+                    let nextTarget: Enemy | null = null;
                     let minD = spell.range + 1;
                     this.enemies.forEach(e => {
-                        if (!hitEnemies.has(e) && e !== currentTarget && e.hp > 0) {
+                        if (currentTarget && !hitEnemies.has(e) && e !== currentTarget && e.hp > 0) {
                             const d = Math.abs(e.x - currentTarget.x) + Math.abs(e.y - currentTarget.y);
                             if (d <= 4 && d < minD) { // Bounce range 4
                                 minD = d;
@@ -700,7 +743,7 @@ export default class Game {
             } else {
                 this.log("No enemy in range.", 'warning');
             }
-        } else if (spell.type === 'drain') {
+        } else if (spell.type === 'drain' && spell.damage && spell.range) {
             const target = getNearestEnemy(spell.range);
             if (target) {
                 target.hp -= spell.damage;
@@ -714,12 +757,12 @@ export default class Game {
             } else {
                 this.log("No enemy in range.", 'warning');
             }
-        } else if (spell.type === 'buff' || spell.type === 'invisibility') {
+        } else if ((spell.type === 'buff' || spell.type === 'invisibility') && spell.duration) {
             this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
             this.log(`You cast ${spell.name}!`, 'magic');
             this.audio.playSound('magic');
             cast = true;
-        } else if (spell.type === 'time_warp') {
+        } else if (spell.type === 'time_warp' && spell.turns) {
             this.extraTurns += spell.turns;
             this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
             this.audio.playSound('magic');
@@ -746,7 +789,7 @@ export default class Game {
         // Cleanup dead enemies
         if (targets.length > 0) {
             targets.forEach(t => {
-                if (this.enemies.includes(t)) { // Check if still in list (duplicates from chain lightning)
+                if (this.enemies.includes(t) && this.player) { // Check if still in list (duplicates from chain lightning)
                     this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
                     this.player.gainXp(t.xpValue || 10);
                 }
@@ -771,9 +814,10 @@ export default class Game {
     }
 
     pickupItem() {
+        if (!this.player) return;
         console.log(`Attempting pickup at ${this.player.x}, ${this.player.y}`);
         console.log(`Items available:`, this.items.map(i => `${i.name} at ${i.x},${i.y}`));
-        const itemIndex = this.items.findIndex(i => i.x === this.player.x && i.y === this.player.y);
+        const itemIndex = this.items.findIndex(i => this.player && i.x === this.player.x && i.y === this.player.y);
         if (itemIndex !== -1) {
             const item = this.items[itemIndex];
             this.player.inventory.push(item);
@@ -788,16 +832,20 @@ export default class Game {
 
     toggleInventory() {
         const invEl = document.getElementById('inventory');
-        if (invEl.style.display === 'none' || !invEl.style.display) {
-            invEl.style.display = 'block';
-            this.renderInventory();
-        } else {
-            invEl.style.display = 'none';
+        if (invEl) {
+            if (invEl.style.display === 'none' || !invEl.style.display) {
+                invEl.style.display = 'block';
+                this.renderInventory();
+            } else {
+                invEl.style.display = 'none';
+            }
         }
     }
 
     renderInventory() {
+        if (!this.player) return;
         const list = document.getElementById('inventory-list');
+        if (!list) return;
         list.innerHTML = '';
         if (this.player.inventory.length === 0) {
             list.innerHTML = '<li>Empty</li>';
@@ -812,12 +860,14 @@ export default class Game {
         });
     }
 
-    useItem(index) {
+    useItem(index: number) {
+        if (!this.player) return;
         const item = this.player.inventory[index];
 
         if (item instanceof HarmonicCore) {
             this.gameState = 'VICTORY';
-            document.getElementById('victory-screen').style.display = 'flex';
+            const vicScreen = document.getElementById('victory-screen');
+            if (vicScreen) vicScreen.style.display = 'flex';
             this.audio.playSound('level_up');
             return;
         }
@@ -842,6 +892,7 @@ export default class Game {
     }
 
     checkStairs() {
+        if (!this.player || !this.map) return;
         if (this.map.tiles[this.player.y][this.player.x] === 'stairs') {
             this.player.level++;
             this.generateLevel();
@@ -857,10 +908,15 @@ export default class Game {
             return;
         }
 
+        if (!this.player || !this.map) return;
+
         this.player.updateBuffs();
 
         this.enemies.forEach(enemy => {
-            enemy.takeTurn(this.player, this.map, this.enemies, (attackType, target) => {
+            if (!this.player || !this.map) return;
+            enemy.takeTurn(this.player, this.map, this.enemies, (attackType: string, target: any) => {
+                if (!this.player) return;
+
                 if (target === this.player) {
                     if (attackType === 'magic') {
                         const damage = 10; // Magic damage
@@ -887,40 +943,42 @@ export default class Game {
                     }
                 } else {
                     // Enemy vs Enemy
+                    // target is likely Enemy or Player, but here it's Enemy vs Enemy so target is Enemy
+                    const enemyTarget = target as Enemy;
                     if (attackType === 'magic') {
                         const damage = 10;
-                        target.hp -= damage;
-                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                            this.log(`${enemy.char} blasts ${target.char} for ${damage} dmg!`, 'warning');
-                            this.renderer.triggerEffect(target.x, target.y, 'hit');
-                            this.renderer.createFloatingText(target.x, target.y, `-${damage}`, '#ff9100');
+                        enemyTarget.hp -= damage;
+                        if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
+                            this.log(`${enemy.char} blasts ${enemyTarget.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
+                            this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${damage}`, '#ff9100');
                         }
                     } else if (attackType === 'firebreath') {
                         const damage = 25;
-                        target.hp -= damage;
-                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                            this.log(`${enemy.char} burns ${target.char} for ${damage} dmg!`, 'warning');
-                            this.renderer.triggerEffect(target.x, target.y, 'hit');
-                            this.renderer.createFloatingText(target.x, target.y, `-${damage}`, '#ff4400');
+                        enemyTarget.hp -= damage;
+                        if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
+                            this.log(`${enemy.char} burns ${enemyTarget.char} for ${damage} dmg!`, 'warning');
+                            this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
+                            this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${damage}`, '#ff4400');
                         }
                     } else {
-                        const result = this.combatSystem.resolveAttack(enemy, target);
-                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
+                        const result = this.combatSystem.resolveAttack(enemy, enemyTarget);
+                        if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
                             if (result.hit) {
-                                this.log(`${enemy.char} hits ${target.char} for ${result.damage} dmg!`, 'warning');
-                                this.renderer.triggerEffect(target.x, target.y, 'hit');
-                                this.renderer.createFloatingText(target.x, target.y, `-${result.damage}`, '#ff9100');
+                                this.log(`${enemy.char} hits ${enemyTarget.char} for ${result.damage} dmg!`, 'warning');
+                                this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
+                                this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${result.damage}`, '#ff9100');
                             } else {
                                 // Optional: log misses between enemies?
                             }
                         }
                     }
 
-                    if (target.hp <= 0) {
-                        if (this.visibleTiles.has(`${target.x},${target.y}`)) {
-                            this.log(`${target.char} is killed by ${enemy.char}!`, 'success');
+                    if (enemyTarget.hp <= 0) {
+                        if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
+                            this.log(`${enemyTarget.char} is killed by ${enemy.char}!`, 'success');
                         }
-                        this.enemies = this.enemies.filter(e => e !== target);
+                        this.enemies = this.enemies.filter(e => e !== enemyTarget);
                     }
                 }
             });
@@ -935,7 +993,8 @@ export default class Game {
         this.update();
     }
 
-    attackEnemy(enemy) {
+    attackEnemy(enemy: Enemy) {
+        if (!this.player) return;
         const result = this.combatSystem.resolveAttack(this.player, enemy);
 
         if (result.hit) {
@@ -977,15 +1036,18 @@ export default class Game {
         }
     }
 
-    log(message, type = 'info') {
+    log(message: string, type: string = 'info') {
         const logEl = document.getElementById('log');
+        if (!logEl) return;
         const entry = document.createElement('div');
         entry.classList.add('log-entry');
         if (type) entry.classList.add(type);
         entry.innerText = message;
         logEl.prepend(entry);
         if (logEl.children.length > 50) {
-            logEl.removeChild(logEl.lastChild);
+            if (logEl.lastChild) {
+                logEl.removeChild(logEl.lastChild);
+            }
         }
     }
 
@@ -993,7 +1055,7 @@ export default class Game {
         requestAnimationFrame(() => this.loop());
 
         // Smooth Movement Interpolation
-        const lerp = (start, end, t) => start + (end - start) * t;
+        const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
         const speed = 0.2;
 
         if (this.player) {
@@ -1024,7 +1086,9 @@ export default class Game {
         if (this.player) {
             this.renderer.drawEntity(this.player, this.visibleTiles);
             // Draw Minimap
-            this.renderer.drawMinimap(this.map, this.player, this.exploredTiles);
+            if (this.map) {
+                this.renderer.drawMinimap(this.map, this.player, this.exploredTiles);
+            }
         }
 
         this.renderer.drawEffects();
@@ -1041,13 +1105,13 @@ export default class Game {
         if (manaEl) manaEl.innerText = `${this.player.mana}/${this.player.maxMana}`;
 
         const lvlVal = document.getElementById('lvl-val');
-        if (lvlVal) lvlVal.innerText = this.player.level;
+        if (lvlVal) lvlVal.innerText = this.player.level.toString();
 
         const atkVal = document.getElementById('atk-val');
-        if (atkVal) atkVal.innerText = this.player.getAttack();
+        if (atkVal) atkVal.innerText = this.player.getAttack().toString();
 
         const defVal = document.getElementById('def-val');
-        if (defVal) defVal.innerText = this.player.getDefense();
+        if (defVal) defVal.innerText = this.player.getDefense().toString();
 
         const weaponVal = document.getElementById('weapon-val');
         if (weaponVal) weaponVal.innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';

@@ -1,5 +1,12 @@
 export default class Entity {
-    constructor(x, y, char, color) {
+    x: number;
+    y: number;
+    drawX: number;
+    drawY: number;
+    char: string;
+    color: string;
+
+    constructor(x: number, y: number, char: string, color: string) {
         this.x = x;
         this.y = y;
         this.drawX = x;
@@ -8,7 +15,7 @@ export default class Entity {
         this.color = color;
     }
 
-    move(dx, dy, map) {
+    move(dx: number, dy: number, map: any): boolean {
         const newX = this.x + dx;
         const newY = this.y + dy;
 

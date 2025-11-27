@@ -1,19 +1,29 @@
 import Entity from './Entity.js';
+import Player from './Player.js';
+import Game from '../engine/Game.js';
 
 export class Item extends Entity {
-    constructor(x, y, name, char, color) {
+    name: string;
+
+    constructor(x: number, y: number, name: string, char: string, color: string) {
         super(x, y, char, color);
         this.name = name;
+    }
+
+    use(player: Player, game: Game): boolean {
+        return false;
     }
 }
 
 export class Potion extends Item {
-    constructor(x, y) {
+    healAmount: number;
+
+    constructor(x: number, y: number) {
         super(x, y, 'Health Potion', '!', '#ff00ff');
         this.healAmount = 20;
     }
 
-    use(player) {
+    use(player: Player, game: Game): boolean {
         if (player.hp >= player.maxHp) {
             return false; // Don't use if full health
         }
@@ -23,30 +33,35 @@ export class Potion extends Item {
 }
 
 export class Scroll extends Item {
-    constructor(x, y, name, color, effectType) {
+    effectType: string;
+
+    constructor(x: number, y: number, name: string, color: string, effectType: string) {
         super(x, y, name, '📜', color);
         this.effectType = effectType;
     }
 
-    use(player, game) {
+    use(player: Player, game: Game): boolean {
         // Scrolls might need access to the game state (map, enemies)
         // We'll pass 'game' as a second argument to use() in Game.js
         return this.activate(player, game);
     }
 
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         return false;
     }
 }
 
 export class ScrollOfFireball extends Scroll {
-    constructor(x, y) {
+    damage: number;
+    range: number;
+
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Fireball', '#ff4400', 'fireball');
         this.damage = 20;
         this.range = 5;
     }
 
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         // Simple implementation: Damage all enemies in range
         let hitCount = 0;
         game.enemies.forEach(enemy => {
@@ -78,13 +93,14 @@ export class ScrollOfFireball extends Scroll {
 }
 
 export class ScrollOfTeleport extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Teleport', '#00ffff', 'teleport');
     }
 
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         let tx, ty;
         let tries = 0;
+        if (!game.map) return false;
         do {
             tx = Math.floor(Math.random() * game.map.width);
             ty = Math.floor(Math.random() * game.map.height);
@@ -103,10 +119,10 @@ export class ScrollOfTeleport extends Scroll {
 }
 
 export class ScrollOfFrostNova extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Frost Nova', '#00ccff', 'freeze');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Frost Nova', cost: 25, damage: 5, type: 'freeze', range: 3 })) {
             game.log("You learned Frost Nova!", 'success');
             return true;
@@ -117,10 +133,10 @@ export class ScrollOfFrostNova extends Scroll {
 }
 
 export class ScrollOfChainLightning extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Chain Lightning', '#ffff00', 'chain_lightning');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Chain Lightning', cost: 30, damage: 20, type: 'chain_lightning', range: 6 })) {
             game.log("You learned Chain Lightning!", 'success');
             return true;
@@ -131,10 +147,10 @@ export class ScrollOfChainLightning extends Scroll {
 }
 
 export class ScrollOfDrainLife extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Drain Life', '#880088', 'drain');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Drain Life', cost: 20, damage: 15, type: 'drain', range: 4 })) {
             game.log("You learned Drain Life!", 'success');
             return true;
@@ -145,10 +161,10 @@ export class ScrollOfDrainLife extends Scroll {
 }
 
 export class ScrollOfStoneSkin extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Stone Skin', '#888888', 'buff');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Stone Skin', cost: 20, duration: 10, defense: 5, type: 'buff' })) {
             game.log("You learned Stone Skin!", 'success');
             return true;
@@ -159,10 +175,10 @@ export class ScrollOfStoneSkin extends Scroll {
 }
 
 export class ScrollOfShadowCloak extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Shadow Cloak', '#333333', 'invisibility');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Shadow Cloak', cost: 20, duration: 5, type: 'invisibility' })) {
             game.log("You learned Shadow Cloak!", 'success');
             return true;
@@ -173,10 +189,10 @@ export class ScrollOfShadowCloak extends Scroll {
 }
 
 export class ScrollOfTimeWarp extends Scroll {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Scroll of Time Warp', '#ff00ff', 'time_warp');
     }
-    activate(player, game) {
+    activate(player: Player, game: Game): boolean {
         if (player.learnSpell({ name: 'Time Warp', cost: 50, turns: 3, type: 'time_warp' })) {
             game.log("You learned Time Warp!", 'success');
             return true;
@@ -187,22 +203,22 @@ export class ScrollOfTimeWarp extends Scroll {
 }
 
 export class HarmonicCore extends Item {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Harmonic Core', '💠', '#00ffff');
     }
 
-    use(player, game) {
+    use(player: Player, game: Game): boolean {
         // Picking up/Using the Core triggers victory
         return true; // Logic handled in Game.js pickup or use
     }
 }
 
 export class Key extends Item {
-    constructor(x, y) {
+    constructor(x: number, y: number) {
         super(x, y, 'Golden Key', '🔑', '#ffd700');
     }
 
-    use(player, game) {
+    use(player: Player, game: Game): boolean {
         game.log("This key can open locked doors.", 'info');
         return false; // Not usable directly, used on interaction
     }

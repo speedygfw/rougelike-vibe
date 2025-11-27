@@ -63,3 +63,8 @@
   width: 150px !important;
   height: 150px !important;
 }
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}

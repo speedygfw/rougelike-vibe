@@ -1,7 +1,15 @@
 import Entity from './Entity.js';
+import Player from './Player.js';
+import { MapData } from '../engine/MapGenerator.js';
 
 export default class Enemy extends Entity {
-    constructor(x, y, type = 'goblin') {
+    type: string;
+    hp: number;
+    faction: string;
+    frozen: number;
+    xpValue?: number;
+
+    constructor(x: number, y: number, type: string = 'goblin') {
         let char = 'g';
         let color = '#ff4444';
         let hp = 20;
@@ -103,12 +111,12 @@ export default class Enemy extends Entity {
         return 0;
     }
 
-    isHostile(otherFaction) {
+    isHostile(otherFaction: string) {
         if (this.faction === otherFaction) return false;
         return true;
     }
 
-    takeTurn(player, map, enemies, onAttack) {
+    takeTurn(player: Player, map: MapData, enemies: Enemy[], onAttack: (type: string, target: Entity) => void) {
         if (this.frozen > 0) {
             this.frozen--;
             return; // Skip turn
@@ -167,8 +175,8 @@ export default class Enemy extends Entity {
         }
     }
 
-    findTarget(player, enemies) {
-        let targets = [];
+    findTarget(player: Player, enemies: Enemy[]) {
+        let targets: Entity[] = [];
 
         // Player is always a potential target (assume player faction is 'player')
         // Check if player is invisible
@@ -189,7 +197,7 @@ export default class Enemy extends Entity {
         if (targets.length === 0) return null;
 
         // Find nearest
-        let nearest = null;
+        let nearest: Entity | null = null;
         let minDist = Infinity;
 
         targets.forEach(t => {
@@ -203,7 +211,7 @@ export default class Enemy extends Entity {
         return nearest;
     }
 
-    moveTowards(target, map, onAttack) {
+    moveTowards(target: Entity, map: MapData, onAttack: ((type: string, target: Entity) => void) | null) {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
 
@@ -219,7 +227,7 @@ export default class Enemy extends Entity {
         this.tryMove(moveX, moveY, map, target, onAttack);
     }
 
-    tryMove(dx, dy, map, target, onAttack) {
+    tryMove(dx: number, dy: number, map: MapData, target: Entity, onAttack: ((type: string, target: Entity) => void) | null) {
         const targetX = this.x + dx;
         const targetY = this.y + dy;
 

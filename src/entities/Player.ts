@@ -1,8 +1,43 @@
 import Entity from './Entity.js';
+import { Item } from './Item.js';
+import { Weapon, Armor } from './Equipment.js';
 
+export interface Spell {
+    name: string;
+    cost: number;
+    damage?: number;
+    heal?: number;
+    type: string;
+    range?: number;
+    duration?: number;
+    defense?: number;
+    turns?: number;
+}
+
+export interface Buff {
+    type: string;
+    duration: number;
+    amount?: number;
+}
 
 export default class Player extends Entity {
-    constructor(x, y, classType = 'warrior') {
+    classType: string;
+    hp: number;
+    maxHp: number;
+    level: number;
+    xp: number;
+    xpToNextLevel: number;
+    inventory: Item[];
+    equipment: {
+        weapon: Weapon | null;
+        armor: Armor | null;
+    };
+    mana: number;
+    maxMana: number;
+    spells: Spell[];
+    buffs: Buff[];
+
+    constructor(x: number, y: number, classType: string = 'warrior') {
         super(x, y, '🧙‍♂️', '#fff');
         this.classType = classType;
         this.hp = 100;
@@ -43,7 +78,7 @@ export default class Player extends Entity {
         this.buffs = [];
     }
 
-    addBuff(buff) {
+    addBuff(buff: Buff) {
         // Check if buff exists, refresh it
         const existing = this.buffs.find(b => b.type === buff.type);
         if (existing) {
@@ -59,11 +94,11 @@ export default class Player extends Entity {
         this.buffs = this.buffs.filter(b => b.duration > 0);
     }
 
-    hasBuff(type) {
+    hasBuff(type: string) {
         return this.buffs.find(b => b.type === type);
     }
 
-    learnSpell(spell) {
+    learnSpell(spell: Spell) {
         if (!this.spells.find(s => s.name === spell.name)) {
             this.spells.push(spell);
             return true;
@@ -71,7 +106,7 @@ export default class Player extends Entity {
         return false;
     }
 
-    gainXp(amount) {
+    gainXp(amount: number) {
         this.xp += amount;
         if (this.xp >= this.xpToNextLevel) {
             this.levelUp();
@@ -91,18 +126,18 @@ export default class Player extends Entity {
         // Return true or message to log? Handled by Game for now via check
     }
 
-    equip(item) {
+    equip(item: any): boolean {
         if (item.slot === 'weapon') {
             if (this.equipment.weapon) {
                 this.inventory.push(this.equipment.weapon); // Unequip old
             }
-            this.equipment.weapon = item;
+            this.equipment.weapon = item as Weapon;
             return true;
         } else if (item.slot === 'armor') {
             if (this.equipment.armor) {
                 this.inventory.push(this.equipment.armor);
             }
-            this.equipment.armor = item;
+            this.equipment.armor = item as Armor;
             return true;
         }
         return false;

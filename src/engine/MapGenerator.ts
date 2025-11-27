@@ -1,14 +1,41 @@
 import { getRandomTheme } from './Theme.js';
 
+export interface MapData {
+    width: number;
+    height: number;
+    tiles: string[][];
+    rooms: Room[];
+    props: Prop[];
+    theme?: any;
+}
+
+export interface Room {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+export interface Prop {
+    x: number;
+    y: number;
+    type: string;
+    char: string;
+}
+
 export default class MapGenerator {
-    constructor(width, height) {
+    width: number;
+    height: number;
+    rooms: Room[];
+
+    constructor(width: number, height: number) {
         this.width = width;
         this.height = height;
         this.rooms = [];
     }
 
-    generate() {
-        let map;
+    generate(): MapData {
+        let map: MapData;
         if (Math.random() < 0.5) {
             map = this.generateDungeon();
         } else {
@@ -19,11 +46,10 @@ export default class MapGenerator {
         return map;
     }
 
-    generateCaves() {
-        const map = {
+    generateCaves(): MapData {
+        const map: MapData = {
             width: this.width,
             height: this.height,
-            tiles: [],
             tiles: [],
             rooms: [], // Caves don't have explicit rooms
             props: []
@@ -31,7 +57,7 @@ export default class MapGenerator {
 
         // Initialize with noise
         for (let y = 0; y < this.height; y++) {
-            const row = [];
+            const row: string[] = [];
             for (let x = 0; x < this.width; x++) {
                 // 45% chance of being a wall
                 row.push(Math.random() < 0.45 ? 'wall' : 'floor');
@@ -80,11 +106,10 @@ export default class MapGenerator {
         return map;
     }
 
-    generateDungeon() {
-        const map = {
+    generateDungeon(): MapData {
+        const map: MapData = {
             width: this.width,
             height: this.height,
-            tiles: [],
             tiles: [],
             rooms: [], // Store rooms for spawning entities later
             props: []
@@ -92,7 +117,7 @@ export default class MapGenerator {
 
         // Initialize with walls
         for (let y = 0; y < this.height; y++) {
-            const row = [];
+            const row: string[] = [];
             for (let x = 0; x < this.width; x++) {
                 row.push('wall');
             }
@@ -110,7 +135,7 @@ export default class MapGenerator {
             const x = Math.floor(Math.random() * (this.width - w - 1)) + 1;
             const y = Math.floor(Math.random() * (this.height - h - 1)) + 1;
 
-            const newRoom = { x, y, w, h };
+            const newRoom: Room = { x, y, w, h };
 
             // Check overlap
             let failed = false;
@@ -160,7 +185,7 @@ export default class MapGenerator {
         return map;
     }
 
-    createRoom(room, map) {
+    createRoom(room: Room, map: MapData) {
         for (let y = room.y; y < room.y + room.h; y++) {
             for (let x = room.x; x < room.x + room.w; x++) {
                 map.tiles[y][x] = 'floor';
@@ -168,7 +193,7 @@ export default class MapGenerator {
         }
     }
 
-    createHCorridor(x1, x2, y, map) {
+    createHCorridor(x1: number, x2: number, y: number, map: MapData) {
         for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
             if (map.tiles[y][x] === 'wall') {
                 map.tiles[y][x] = 'floor';
@@ -180,7 +205,7 @@ export default class MapGenerator {
         }
     }
 
-    createVCorridor(y1, y2, x, map) {
+    createVCorridor(y1: number, y2: number, x: number, map: MapData) {
         for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
             if (map.tiles[y][x] === 'wall') {
                 map.tiles[y][x] = 'floor';
@@ -190,7 +215,7 @@ export default class MapGenerator {
         }
     }
 
-    placeDoors(map) {
+    placeDoors(map: MapData) {
         // Simple heuristic: If a floor tile has walls on two opposite sides and floor on the other two, it might be a doorway.
         // And it should be at the edge of a room.
         for (const room of map.rooms) {
@@ -215,14 +240,14 @@ export default class MapGenerator {
         }
     }
 
-    getCenter(room) {
+    getCenter(room: Room) {
         return {
             x: Math.floor(room.x + room.w / 2),
             y: Math.floor(room.y + room.h / 2)
         };
     }
 
-    decorateMap(map) {
+    decorateMap(map: MapData) {
         // Floor Decorations
         for (let y = 0; y < map.height; y++) {
             for (let x = 0; x < map.width; x++) {
@@ -243,22 +268,19 @@ export default class MapGenerator {
             }
         }
 
-        // Wall Decorations (Torches)
+        // Wall Decorations (Torches & Banners)
         for (let y = 1; y < map.height - 1; y++) {
             for (let x = 1; x < map.width - 1; x++) {
                 if (map.tiles[y][x] === 'wall') {
-                    // Check if adjacent to floor
-                    let hasFloorNeighbor = false;
-                    const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-                    for (const [dx, dy] of neighbors) {
-                        if (map.tiles[y + dy][x + dx] === 'floor') {
-                            hasFloorNeighbor = true;
-                            break;
+                    // Check if adjacent to floor (south)
+                    // Torches and banners look best on "front facing" walls (north of a floor tile)
+                    if (map.tiles[y + 1][x] === 'floor') {
+                        const rand = Math.random();
+                        if (rand < 0.1) {
+                            map.props.push({ x, y, type: 'torch', char: '🔥' });
+                        } else if (rand < 0.15) {
+                            map.props.push({ x, y, type: 'banner', char: '🚩' });
                         }
-                    }
-
-                    if (hasFloorNeighbor && Math.random() < 0.03) {
-                        map.props.push({ x, y, type: 'torch', char: '🔥' });
                     }
                 }
             }
@@ -270,12 +292,12 @@ export default class MapGenerator {
                 const tile = map.tiles[y][x];
                 if (tile === 'floor') {
                     const rand = Math.random();
-                    if (rand < 0.1) map.tiles[y][x] = 'floor_cracked';
-                    else if (rand < 0.2) map.tiles[y][x] = 'floor_mossy';
+                    // 15% chance for mossy floor
+                    if (rand < 0.15) map.tiles[y][x] = 'floor_moss';
                 } else if (tile === 'wall') {
                     const rand = Math.random();
-                    if (rand < 0.1) map.tiles[y][x] = 'wall_cracked';
-                    else if (rand < 0.2) map.tiles[y][x] = 'wall_mossy';
+                    // 15% chance for cracked wall
+                    if (rand < 0.15) map.tiles[y][x] = 'wall_cracked';
                 }
             }
         }
