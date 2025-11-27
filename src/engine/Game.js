@@ -45,23 +45,7 @@ export default class Game {
     }
 
     createSaveControls() {
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.top = '10px';
-        container.style.right = '10px';
-        container.style.zIndex = '100';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.innerText = 'Save';
-        saveBtn.onclick = () => this.saveGame();
-
-        const loadBtn = document.createElement('button');
-        loadBtn.innerText = 'Load';
-        loadBtn.onclick = () => this.loadGame();
-
-        container.appendChild(saveBtn);
-        container.appendChild(loadBtn);
-        document.body.appendChild(container);
+        // Save controls removed to fix UI layout issues
     }
 
     saveGame() {
