@@ -1,8 +1,22 @@
 console.log("Main.js loaded");
 import Game from './src/engine/Game.js';
 
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+  alert('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nStack: ' + (error ? error.stack : 'n/a'));
+  return false;
+};
+
+window.addEventListener('unhandledrejection', function (event) {
+  alert('Unhandled Rejection: ' + event.reason);
+});
+
 window.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('gameCanvas');
-  const game = new Game(canvas);
-  game.init();
+  try {
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) throw new Error("Canvas not found");
+    const game = new Game(canvas);
+    game.init();
+  } catch (e) {
+    alert("Init Error: " + e.message);
+  }
 });
