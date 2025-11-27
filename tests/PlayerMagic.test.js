@@ -56,7 +56,8 @@ describe('Player Magic System', () => {
             drawEntity: vi.fn(),
             createFloatingText: vi.fn(),
             drawEffects: vi.fn(),
-            drawMinimap: vi.fn()
+            drawMinimap: vi.fn(),
+            updateCamera: vi.fn()
         };
         game.log = vi.fn();
     });

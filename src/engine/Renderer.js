@@ -43,6 +43,14 @@ export default class Renderer {
 
         this.cameraX = Math.max(0, Math.min(this.cameraX, mapWidthPx - this.canvas.width));
         this.cameraY = Math.max(0, Math.min(this.cameraY, mapHeightPx - this.canvas.height));
+
+        // Center map if smaller than canvas
+        if (mapWidthPx < this.canvas.width) {
+            this.cameraX = -(this.canvas.width - mapWidthPx) / 2;
+        }
+        if (mapHeightPx < this.canvas.height) {
+            this.cameraY = -(this.canvas.height - mapHeightPx) / 2;
+        }
     }
 
     drawMap(map, visibleTiles, exploredTiles) {
@@ -54,6 +62,7 @@ export default class Renderer {
             chars: { wall: '🧱', floor: '·', door_closed: '🚪', door_open: 'frame' }
         };
 
+        // Calculate visible range based on camera
         // Calculate visible range based on camera
         const startX = Math.floor(this.cameraX / this.tileSize);
         const startY = Math.floor(this.cameraY / this.tileSize);
@@ -150,6 +159,10 @@ export default class Renderer {
         if (!map || !player) return;
         const minimapCanvas = document.getElementById('minimap');
         if (!minimapCanvas) return;
+
+        // Force resolution
+        if (minimapCanvas.width !== 150) minimapCanvas.width = 150;
+        if (minimapCanvas.height !== 150) minimapCanvas.height = 150;
 
         const ctx = minimapCanvas.getContext('2d');
         const w = minimapCanvas.width;

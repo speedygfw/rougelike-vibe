@@ -973,6 +973,16 @@ export default class Game {
     }
 
     update() {
+        if (this.player && this.map) {
+            this.renderer.updateCamera(this.player, this.map);
+            this.visibleTiles = this.fov.compute(this.player.x, this.player.y, 8);
+
+            // Update explored tiles
+            this.visibleTiles.forEach(key => {
+                this.exploredTiles.add(key);
+            });
+        }
+
         this.draw();
         this.updateUI();
 
