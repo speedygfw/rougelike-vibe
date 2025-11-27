@@ -22,35 +22,42 @@ To start the game locally, follow these steps:
 
 ## 📖 About the Game
 
-This project was created as an experiment in collaboration between human and AI.
+This project was created as an experiment in collaboration between human and AI. It is a fully functional Roguelike dungeon crawler built from scratch with JavaScript.
 
-*   **Origin**: The game was developed in a pair programming session with an AI. The goal was to build a functioning Roguelike from scratch, starting with the base engine up to complex features like inventory management and boss fights.
-*   **Technology**:
-    *   **Engine**: Custom JavaScript engine (no external game libraries).
-    *   **Rendering**: HTML5 Canvas.
-    *   **UI**: HTML/CSS with a "Dark Glass" design.
-    *   **Build Tool**: Vite.
-    *   **Tests**: Vitest.
+## 📜 Story: The Echoes of Aethelgard
+
+The realm of **Aethelgard** has fractured. Time itself is unraveling, consumed by a chaotic force known as **The Dissonance**. You are a traveler from beyond the veil, seeking the **Harmonic Core** to restore balance to the timeline.
+
+But beware... the echoes of the past are not always friendly. You must descend 20 levels deep into the distorted reality, facing twisted creatures and ancient guardians to save the world from eternal silence.
+
+## ✨ Key Features
+
+*   **20 Levels of Danger**: Explore a massive dungeon with 20 unique levels, ending in a climactic boss fight.
+*   **3 Unique Classes**:
+    *   **Warrior**: A tanky fighter with high HP and strength.
+    *   **Mage**: A master of the arcane who starts with powerful spells.
+    *   **Rogue**: A stealthy assassin with high critical hit chance.
+*   **Spell Book System**: Learn and cast powerful magic like *Fireball*, *Chain Lightning*, and *Time Warp*. Press **'B'** to manage your spells.
+*   **Dynamic World**:
+    *   **NPCs**: Meet friendly characters who offer lore and advice.
+    *   **Factions**: Watch enemies fight each other (e.g., Skeletons vs. Goblins).
+    *   **Varied Environments**: Traverse classic brick dungeons and organic cave systems.
+*   **Modern UI**: A sleek "Dark Glass" interface with animations and clear feedback.
 
 ## 🎮 How to Play
 
 **[📖 Click here for the Full Game Guide & Bestiary](GAME_GUIDE.md)**
 
 ### Goal
-Your goal is to descend deep into the dungeon and find the **Amulet of Yendor** on **Level 10**. Once you possess it, you have won!
+Descend to **Level 20**, defeat **The Dissonance** (Dragon Boss), and retrieve the **Harmonic Core**.
 
 ### Controls
-*   **Arrow Keys**: Move and Attack (move into enemies).
-*   **Mouse**: Interact with UI (Inventory, Logs).
-
-### Mechanics
-*   **Turn-based**: The world only moves when you move. Take your time for your decisions.
-*   **Classes**: Choose at the start between Warrior (more HP), Mage (less HP), and Rogue.
-*   **Combat**: Move onto a tile with an enemy to attack.
-*   **Equipment**: Find weapons and armor to become stronger.
-*   **Items**: Use potions, scrolls, and find keys for locked doors.
-*   **Level Variety**: Explore classic dungeons and organic cave systems.
-*   **Enemies**: Different enemies have different behaviors. Beware of the Dragon on Level 10!
+*   **Arrow Keys**: Move and Attack (bump into enemies).
+*   **B**: Open **Spell Book**.
+*   **I**: Open **Inventory**.
+*   **G**: **Pick up** items.
+*   **1-9**: Cast Spells.
+*   **Mouse**: Interact with UI.
 
 ---
 
