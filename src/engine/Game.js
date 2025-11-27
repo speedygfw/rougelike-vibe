@@ -220,8 +220,12 @@ export default class Game {
                     if (e.cancelable) e.preventDefault(); // Prevent ghost clicks if possible
 
                     // Haptic Feedback
-                    if (navigator.vibrate) {
-                        navigator.vibrate(10); // Short tick
+                    try {
+                        if (navigator && navigator.vibrate) {
+                            navigator.vibrate(10); // Short tick
+                        }
+                    } catch (err) {
+                        // Ignore vibration errors
                     }
 
                     this.processCommand(command);

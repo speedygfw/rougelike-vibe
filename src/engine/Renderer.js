@@ -10,14 +10,18 @@ export default class Renderer {
     }
 
     resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.canvas.width = window.innerWidth || 320;
+        this.canvas.height = window.innerHeight || 480;
 
         // Adjust tile size for mobile
-        if (window.innerWidth < 768) {
-            this.tileSize = 48; // Zoom in for mobile
-        } else {
-            this.tileSize = 32; // Standard size for desktop
+        try {
+            if (window.innerWidth && window.innerWidth < 768) {
+                this.tileSize = 48; // Zoom in for mobile
+            } else {
+                this.tileSize = 32; // Standard size for desktop
+            }
+        } catch (e) {
+            this.tileSize = 32;
         }
     }
 
