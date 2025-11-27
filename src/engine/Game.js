@@ -1017,25 +1017,24 @@ export default class Game {
 
     draw() {
         this.renderer.clear();
-        this.renderer.drawMap(this.map, this.visibleTiles, this.exploredTiles);
+        if (this.map) {
+            this.renderer.drawMap(this.map, this.visibleTiles, this.exploredTiles);
+        }
 
-        this.items.forEach(item => {
-            this.renderer.drawEntity(item, this.visibleTiles);
-        });
-
+        this.items.forEach(item => this.renderer.drawEntity(item, this.visibleTiles));
         this.enemies.forEach(enemy => {
-            this.renderer.drawEntity(enemy, this.visibleTiles);
+            if (enemy.hp > 0) this.renderer.drawEntity(enemy, this.visibleTiles);
         });
-
-        this.npcs.forEach(npc => {
-            this.renderer.drawEntity(npc, this.visibleTiles);
-        });
+        this.npcs.forEach(npc => this.renderer.drawEntity(npc, this.visibleTiles));
 
         if (this.player) {
             this.renderer.drawEntity(this.player, this.visibleTiles);
+            // Draw Minimap
+            this.renderer.drawMinimap(this.map, this.player, this.exploredTiles);
         }
 
         this.renderer.drawEffects();
+        this.updateUI();
     }
 
     updateUI() {

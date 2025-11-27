@@ -4,6 +4,8 @@ export default class Renderer {
         this.ctx = canvas.getContext('2d');
         this.tileSize = 32;
         this.effects = [];
+        this.cameraX = 0;
+        this.cameraY = 0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -30,6 +32,19 @@ export default class Renderer {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
+    updateCamera(player, map) {
+        // Center camera on player
+        this.cameraX = player.x * this.tileSize - this.canvas.width / 2;
+        this.cameraY = player.y * this.tileSize - this.canvas.height / 2;
+
+        // Clamp to map bounds
+        const mapWidthPx = map.width * this.tileSize;
+        const mapHeightPx = map.height * this.tileSize;
+
+        this.cameraX = Math.max(0, Math.min(this.cameraX, mapWidthPx - this.canvas.width));
+        this.cameraY = Math.max(0, Math.min(this.cameraY, mapHeightPx - this.canvas.height));
+    }
+
     drawMap(map, visibleTiles, exploredTiles) {
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -39,8 +54,16 @@ export default class Renderer {
             chars: { wall: '🧱', floor: '·', door_closed: '🚪', door_open: 'frame' }
         };
 
-        for (let y = 0; y < map.height; y++) {
-            for (let x = 0; x < map.width; x++) {
+        // Calculate visible range based on camera
+        const startX = Math.floor(this.cameraX / this.tileSize);
+        const startY = Math.floor(this.cameraY / this.tileSize);
+        const endX = startX + Math.ceil(this.canvas.width / this.tileSize) + 1;
+        const endY = startY + Math.ceil(this.canvas.height / this.tileSize) + 1;
+
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                if (x < 0 || x >= map.width || y < 0 || y >= map.height) continue;
+
                 const key = `${x},${y}`;
                 const isVisible = visibleTiles.has(key);
                 const isExplored = exploredTiles.has(key);
@@ -48,8 +71,8 @@ export default class Renderer {
                 if (!isExplored && !isVisible) continue;
 
                 const tile = map.tiles[y][x];
-                const posX = x * this.tileSize;
-                const posY = y * this.tileSize;
+                const posX = x * this.tileSize - this.cameraX;
+                const posY = y * this.tileSize - this.cameraY;
 
                 // Lighting Effect
                 let alpha = 0.3;
@@ -105,8 +128,8 @@ export default class Renderer {
             map.props.forEach(prop => {
                 const key = `${prop.x},${prop.y}`;
                 if (visibleTiles.has(key) || exploredTiles.has(key)) {
-                    const posX = prop.x * this.tileSize;
-                    const posY = prop.y * this.tileSize;
+                    const posX = prop.x * this.tileSize - this.cameraX;
+                    const posY = prop.y * this.tileSize - this.cameraY;
                     this.ctx.globalAlpha = visibleTiles.has(key) ? 1.0 : 0.3;
 
                     if (prop.type === 'torch') this.ctx.fillStyle = '#ff5722';
@@ -123,13 +146,48 @@ export default class Renderer {
         this.ctx.globalAlpha = 1.0;
     }
 
+    drawMinimap(map, player, exploredTiles) {
+        const minimapCanvas = document.getElementById('minimap');
+        if (!minimapCanvas) return;
+
+        const ctx = minimapCanvas.getContext('2d');
+        const w = minimapCanvas.width;
+        const h = minimapCanvas.height;
+
+        // Clear
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillRect(0, 0, w, h);
+
+        const tileW = w / map.width;
+        const tileH = h / map.height;
+
+        for (let y = 0; y < map.height; y++) {
+            for (let x = 0; x < map.width; x++) {
+                const key = `${x},${y}`;
+                if (exploredTiles.has(key)) {
+                    const tile = map.tiles[y][x];
+                    if (tile.startsWith('wall')) ctx.fillStyle = '#666';
+                    else if (tile.startsWith('floor')) ctx.fillStyle = '#222';
+                    else if (tile === 'stairs') ctx.fillStyle = '#ff0';
+                    else ctx.fillStyle = '#444';
+
+                    ctx.fillRect(x * tileW, y * tileH, tileW, tileH);
+                }
+            }
+        }
+        // Draw Player
+        ctx.fillStyle = '#0f0';
+        ctx.fillRect(player.x * tileW, player.y * tileH, tileW, tileH);
+    }
+
     drawEntity(entity, visibleTiles) {
         if (!visibleTiles) return;
         if (!visibleTiles.has(`${entity.x},${entity.y}`)) return;
 
         const tileSize = this.tileSize;
-        const x = (entity.drawX !== undefined ? entity.drawX : entity.x) * tileSize;
-        const y = (entity.drawY !== undefined ? entity.drawY : entity.y) * tileSize;
+        const x = (entity.drawX !== undefined ? entity.drawX : entity.x) * tileSize - this.cameraX;
+        const y = (entity.drawY !== undefined ? entity.drawY : entity.y) * tileSize - this.cameraY;
 
         this.ctx.font = `${tileSize * 0.8}px sans-serif`;
         this.ctx.textAlign = 'center';
@@ -203,20 +261,22 @@ export default class Renderer {
     drawEffects() {
         for (let i = this.effects.length - 1; i >= 0; i--) {
             const effect = this.effects[i];
+            const drawX = effect.x - this.cameraX;
+            const drawY = effect.y - this.cameraY;
 
             if (effect.type === 'text') {
                 this.ctx.font = 'bold 16px "Inter", sans-serif';
                 this.ctx.fillStyle = effect.color;
                 this.ctx.strokeStyle = 'black';
                 this.ctx.lineWidth = 2;
-                this.ctx.strokeText(effect.text, effect.x, effect.y);
-                this.ctx.fillText(effect.text, effect.x, effect.y);
+                this.ctx.strokeText(effect.text, drawX, drawY);
+                this.ctx.fillText(effect.text, drawX, drawY);
 
                 effect.y += effect.vy;
             } else {
                 this.ctx.fillStyle = effect.color;
                 this.ctx.beginPath();
-                this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                this.ctx.arc(drawX, drawY, effect.size, 0, Math.PI * 2);
                 this.ctx.fill();
 
                 effect.x += effect.vx;
