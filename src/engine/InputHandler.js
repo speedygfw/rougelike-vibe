@@ -14,6 +14,7 @@ export default class InputHandler {
         if (e.key === 'Enter' || e.key === ' ') return { type: 'interact' };
         if (e.key === 'g') return { type: 'pickup' };
         if (e.key === 'i') return { type: 'inventory' };
+        if (e.key === 'b') return { type: 'spellbook' };
         if (e.key === 'r') return { type: 'restart' };
 
         return null;

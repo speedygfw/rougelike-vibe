@@ -122,6 +122,7 @@ export default class Renderer {
         else if (entity.type === 'goblin') char = '👿';
         else if (entity.type === 'skeleton') char = '💀';
         else if (entity.type === 'ogre') char = '👹';
+        else if (entity.constructor.name === 'NPC') char = '🗣️';
 
         // Shadow
         this.ctx.fillStyle = 'rgba(0,0,0,0.5)';

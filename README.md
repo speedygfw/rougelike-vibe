@@ -107,3 +107,12 @@ I implemented major gameplay features to increase variety and replayability.
 *   **Doors & Keys**: Added locked doors and keys to dungeon generation.
 *   **Varied Levels**: Implemented Cellular Automata for Cave generation, mixing up the level styles.
 *   **Polish**: Refined the UI and added comprehensive unit tests for all new features.
+
+### 7. Story & Expansion Update
+I integrated a narrative layer and expanded the game's scope.
+
+*   **Story**: Added "The Echoes of Aethelgard" intro and enhanced ending texts.
+*   **Expansion**: Increased dungeon depth to **20 Levels**.
+*   **NPCs**: Added friendly NPCs with dialogue to flesh out the world.
+*   **Spell Book**: Added a dedicated UI ('B') to view and manage spells.
+*   **Quality of Life**: Guaranteed key drops to prevent soft-locks.

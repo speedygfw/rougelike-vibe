@@ -158,6 +158,21 @@ export default class Game {
             window.addEventListener('keydown', (e) => this.handleInput(e));
             console.log("Event listener attached");
 
+            // Story Intro Handler
+            const storyIntro = document.getElementById('story-intro');
+            if (storyIntro) {
+                console.log("Story intro found, attaching listener");
+                storyIntro.style.cursor = 'pointer'; // Ensure it looks clickable
+                storyIntro.addEventListener('click', () => {
+                    console.log("Story intro clicked");
+                    storyIntro.style.display = 'none';
+                    if (selectionDiv) selectionDiv.style.display = 'flex';
+                });
+            } else {
+                // Fallback if story intro is missing for some reason
+                if (selectionDiv) selectionDiv.style.display = 'flex';
+            }
+
             // Event Delegation for Class Selection
             if (selectionDiv) {
                 selectionDiv.onclick = (e) => {
@@ -225,7 +240,7 @@ export default class Game {
             this.items = [];
             this.npcs = [];
 
-            if (this.player.level === 10) {
+            if (this.player.level === 20) {
                 // Boss Level
                 const center = this.mapGenerator.getCenter(this.map.rooms[this.map.rooms.length - 1]);
                 this.enemies.push(new Enemy(center.x, center.y, 'dragon')); // The Dissonance
@@ -292,7 +307,7 @@ export default class Game {
                     }
 
                     // Chance to spawn NPC
-                    if (Math.random() < 0.15) {
+                    if (Math.random() < 0.5) {
                         const nx = Math.floor(Math.random() * room.w) + room.x;
                         const ny = Math.floor(Math.random() * room.h) + room.y;
                         if (this.map.tiles[ny][nx] === 'floor') {
@@ -307,6 +322,42 @@ export default class Game {
                             const name = names[Math.floor(Math.random() * names.length)];
                             this.npcs.push(new NPC(nx, ny, name, dialogues));
                         }
+                    }
+                }
+
+                // Guaranteed Key Spawning to prevent soft-locks
+                // If a room has a door, ensure a key is available in the previous room (to enter) 
+                // and/or current room (to exit).
+                const spawnKey = (r) => {
+                    const kx = Math.floor(Math.random() * r.w) + r.x;
+                    const ky = Math.floor(Math.random() * r.h) + r.y;
+                    if (this.map.tiles[ky][kx] === 'floor') {
+                        this.items.push(new Key(kx, ky));
+                    }
+                };
+
+                for (let i = 0; i < this.map.rooms.length; i++) {
+                    const room = this.map.rooms[i];
+                    let hasDoor = false;
+
+                    // Check Top/Bottom
+                    for (let x = room.x; x < room.x + room.w; x++) {
+                        if (this.map.tiles[room.y - 1] && this.map.tiles[room.y - 1][x] === 'door_closed') hasDoor = true;
+                        if (this.map.tiles[room.y + room.h] && this.map.tiles[room.y + room.h][x] === 'door_closed') hasDoor = true;
+                    }
+                    // Check Left/Right
+                    for (let y = room.y; y < room.y + room.h; y++) {
+                        if (this.map.tiles[y][room.x - 1] === 'door_closed') hasDoor = true;
+                        if (this.map.tiles[y][room.x + room.w] === 'door_closed') hasDoor = true;
+                    }
+
+                    if (hasDoor) {
+                        // Spawn key in previous room (needed to enter this room if door is entrance)
+                        if (i > 0) {
+                            spawnKey(this.map.rooms[i - 1]);
+                        }
+                        // Spawn key in this room (needed to exit this room if door is exit)
+                        spawnKey(room);
                     }
                 }
 
@@ -473,6 +524,8 @@ export default class Game {
             this.pickupItem();
         } else if (command.type === 'inventory') {
             this.toggleInventory();
+        } else if (command.type === 'spellbook') {
+            this.toggleSpellBook();
         } else if (command.type === 'restart') {
             // Handle restart if needed
         }
@@ -484,6 +537,32 @@ export default class Game {
                 this.castSpell(spellIndex);
             }
         }
+    }
+
+    toggleSpellBook() {
+        const bookEl = document.getElementById('spell-book');
+        if (bookEl.style.display === 'none' || !bookEl.style.display) {
+            bookEl.style.display = 'block';
+            this.renderSpellBook();
+        } else {
+            bookEl.style.display = 'none';
+        }
+    }
+
+    renderSpellBook() {
+        const list = document.getElementById('spell-list');
+        list.innerHTML = '';
+        if (this.player.spells.length === 0) {
+            list.innerHTML = '<li>No Spells Learned</li>';
+            return;
+        }
+
+        this.player.spells.forEach((spell, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${index + 1}. ${spell.name}</span> <span style="color: #00b0ff;">${spell.cost} MP</span>`;
+            // Add tooltip or description if possible, for now just list
+            list.appendChild(li);
+        });
     }
 
     castSpell(index) {

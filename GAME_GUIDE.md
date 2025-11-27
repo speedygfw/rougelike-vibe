@@ -10,6 +10,7 @@ Welcome to the official guide for **Mein Roguelike**. This manual provides detai
 | **Attack** | `Arrow Keys` | Move into an enemy to attack them with your equipped weapon. |
 | **Pickup Item** | `g` | Pick up an item standing on your current tile. |
 | **Inventory** | `i` | Toggle the inventory screen to view and use items. |
+| **Spell Book** | `b` | Toggle the spell book to view your known spells. |
 | **Interact** | `Space` / `Enter` | Interact with stairs to descend to the next level. |
 | **Cast Spell** | `1` - `9` | Cast a spell from your spellbook (if you have mana). |
 | **Restart** | `r` | Restart the game after death or victory. |
@@ -22,6 +23,18 @@ Choose your path wisely at the start of the game:
 *   **Warrior**: High HP and Strength. Starts with a sword. Best for melee combat.
 *   **Mage**: High Mana and Intelligence. Starts with spells. Best for ranged magic attacks.
 *   **Rogue**: High Agility and Critical Chance. Starts with a dagger. Best for stealth and precision.
+
+## 🔮 Magic & Spells
+
+Spells consume **Mana**. You can view your spells by pressing `B`.
+
+*   **Heal**: Restores HP.
+*   **Fireball**: Deals heavy damage to a single target.
+*   **Freeze**: Freezes enemies in place for a few turns.
+*   **Chain Lightning**: Bounces between multiple enemies.
+*   **Drain Life**: Steals HP from an enemy.
+*   **Teleport**: Instantly moves you to a random safe location.
+*   **Time Warp**: Grants extra turns.
 
 ## 🐉 Enemy Bestiary
 
@@ -40,7 +53,7 @@ Beware of the monsters lurking in the dark. Different factions may fight each ot
 | `👻` | **Ghost** | 15 | 5 | 5 | Undead | **High Defense**. Ethereal form makes them hard to hit. |
 | `O` | **Orc** | 40 | 8 | 3 | Monster | Strong and durable. A serious threat. |
 | `👹` | **Ogre** | 60 | 12 | 4 | Monster | Massive damage. Approach with caution. |
-| `🐉` | **Dragon** | 150 | 20 | 8 | Dragon | **BOSS**. Uses **Firebreath** (AOE). The ultimate challenge on Level 10. |
+| `🐉` | **Dragon** | 150 | 20 | 8 | Dragon | **BOSS**. Uses **Firebreath** (AOE). The ultimate challenge on **Level 20**. |
 
 ### Factions
 Enemies belong to factions. Hostile factions will attack each other if they cross paths:
@@ -53,12 +66,11 @@ Enemies belong to factions. Hostile factions will attack each other if they cros
 ## 🎒 Items & Equipment
 
 *   **Potions**: Restore Health (`Red`) or Mana (`Blue`).
-*   **Scrolls**:
-    *   *Fireball*: Deals damage to all enemies in a radius.
-    *   *Teleport*: Instantly moves you to a random safe location.
+*   **Scrolls**: Learn new spells permanently!
 *   **Weapons**: Increase your Attack damage.
 *   **Armor**: Increase your Defense, reducing damage taken.
-*   **Amulet of Yendor**: The goal of the game. Found on Level 10.
+*   **Keys**: Used to open locked doors.
+*   **Amulet of Yendor**: The goal of the game. Found on **Level 20**.
 
 ## 📜 Tips for Survival
 
