@@ -94,7 +94,7 @@ I established a robust testing environment to ensure game stability.
 
 *   **Refactoring**: Moved all tests to a dedicated `tests/` directory for better organization.
 *   **New Tests**: Added unit tests for Scrolls (Fireball/Teleport) and Enemy AI (Shaman fleeing/Bat movement).
-*   **Verification**: Ran the full test suite with vitest, confirming all 16 tests pass.
+*   **Verification**: Ran the full test suite with vitest, confirming all 59 tests pass.
 
 ### 5. Endgame Content
 I implemented the final challenge and victory condition for the game.
