@@ -22,12 +22,14 @@ import FOV from './FOV.js';
 import AudioSystem from './AudioSystem.js';
 import InputHandler from './InputHandler.js';
 import CombatSystem from './CombatSystem.js';
+import { UIManager } from './UIManager.js';
 
 export default class Game {
     renderer: ThreeRenderer;
     audio: AudioSystem;
     inputHandler: InputHandler;
     combatSystem: CombatSystem;
+    ui: UIManager;
     mapGenerator: MapGenerator;
     map: MapData | null;
     player: Player | null;
@@ -43,14 +45,15 @@ export default class Game {
     gameState: 'PLAYING' | 'GAMEOVER' | 'VICTORY';
     fov: FOV | null;
     playerClass: string;
-
-    constructor() {
+    minimapCanvas: HTMLCanvasElement | null;
+    minimapCtx: CanvasRenderingContext2D | null;
+    constructor(playerClass: string = 'warrior') {
         this.renderer = new ThreeRenderer();
         this.audio = new AudioSystem();
         this.inputHandler = new InputHandler();
-        this.combatSystem = new CombatSystem(this);
-        this.mapGenerator = new MapGenerator(100, 80); // Increased map size
-        this.createSaveControls();
+        this.combatSystem = new CombatSystem();
+        this.ui = new UIManager();
+        this.mapGenerator = new MapGenerator(60, 40);
         this.map = null;
         this.player = null;
         this.enemies = [];
@@ -64,7 +67,17 @@ export default class Game {
         this.fovRadius = 8;
         this.gameState = 'PLAYING';
         this.fov = null;
-        this.playerClass = 'warrior';
+        this.playerClass = playerClass;
+        this.minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement;
+        this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
+
+        // UI Event Listeners
+        window.addEventListener('useItem', (e: any) => {
+            this.useItem(e.detail.index);
+        });
+        window.addEventListener('castSpell', (e: any) => {
+            this.castSpell(e.detail.index);
+        });
     }
 
     createSaveControls() {
@@ -93,13 +106,13 @@ export default class Game {
             exploredTiles: Array.from(this.exploredTiles)
         };
         localStorage.setItem('roguelike_save', JSON.stringify(data));
-        this.log("Game Saved!", 'success');
+        this.ui.log("Game Saved!", 'success');
     }
 
     loadGame() {
         const json = localStorage.getItem('roguelike_save');
         if (!json) {
-            this.log("No save game found.", 'warning');
+            this.ui.log("No save game found.", 'warning');
             return;
         }
 
@@ -136,7 +149,7 @@ export default class Game {
             this.updateFOV();
         }
 
-        this.log("Game Loaded!", 'success');
+        this.ui.log("Game Loaded!", 'success');
         this.update();
     }
 
@@ -225,6 +238,11 @@ export default class Game {
 
             this.setupMobileControls();
 
+            this.minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement;
+            if (this.minimapCanvas) {
+                this.minimapCtx = this.minimapCanvas.getContext('2d');
+            }
+
         } catch (e) {
             console.error("Error in Game.init:", e);
         }
@@ -287,235 +305,302 @@ export default class Game {
 
     generateLevel() {
         // Generate Map
-        const map = this.mapGenerator.generate();
-        this.map = map;
-        this.fov = new FOV(this.map);
-        this.exploredTiles.clear();
+        let map: MapData;
+        if (!this.player || this.player.level === 0) {
+            map = this.mapGenerator.generateVillage();
+            this.map = map;
 
-        // Spawn Player in the first room
-        if (this.map.rooms && this.map.rooms.length > 0) {
-            const firstRoom = this.map.rooms[0];
-            const center = this.mapGenerator.getCenter(firstRoom);
-
+            // Initialize player if not exists
             if (!this.player) {
-                this.player = new Player(center.x, center.y, this.playerClass);
+                // Use map.startX/Y if available, otherwise fallback to center
+                const startX = map.startX ?? Math.floor(map.width / 2);
+                const startY = map.startY ?? Math.floor(map.height / 2);
+                this.player = new Player(startX, startY, this.playerClass);
             } else {
-                this.player.x = center.x;
-                this.player.y = center.y;
+                // Reset player position for existing player entering village
+                if (map.startX && map.startY) {
+                    this.player.x = map.startX;
+                    this.player.y = map.startY;
+                }
             }
 
+            this.ui.log("Welcome to the Village of Oakhaven.", 'important');
+        } else {
+            map = this.mapGenerator.generate();
+            this.map = map;
             // Spawn Enemies and Items in other rooms
             this.enemies = [];
             this.items = [];
             this.npcs = [];
 
-            if (this.player.level === 20) {
-                // Boss Level
-                const center = this.mapGenerator.getCenter(map.rooms[map.rooms.length - 1]);
-                this.enemies.push(new Enemy(center.x, center.y, 'dragon')); // The Dissonance
-
-                // Place Harmonic Core
-                const amuletPos = this.mapGenerator.getCenter(map.rooms[Math.floor(map.rooms.length / 2)]);
-                this.items.push(new HarmonicCore(amuletPos.x, amuletPos.y));
-
-                this.log('You feel a distortion in time... The Dissonance awaits!', 'important');
-            } else {
-                for (let i = 1; i < map.rooms.length; i++) {
-                    const room = map.rooms[i];
+            if (map.rooms.length > 0) {
+                if (this.player?.level === 0) {
+                    // Village NPCs
+                    // Player position is already set by map.startX/Y at the top of this function
 
 
-                    // Spawn 1-3 enemies per room
-                    const enemyCount = Math.floor(Math.random() * 3) + 1;
-                    for (let j = 0; j < enemyCount; j++) {
-                        if (Math.random() < 0.9) {
-                            const roll = Math.random();
-                            let type = 'goblin';
+                    // Load NPCs from Map Data
+                    if (this.map.npcs) {
+                        this.map.npcs.forEach(npcData => {
+                            this.npcs.push(new NPC(npcData.x, npcData.y, npcData.name, npcData.dialogues));
+                        });
+                    }
 
-                            // Weighted spawn pool - More variety
-                            if (roll < 0.15) type = 'rat';
-                            else if (roll < 0.25) type = 'bat';
-                            else if (roll < 0.35) type = 'spider';
-                            else if (roll < 0.50) type = 'kobold';
-                            else if (roll < 0.65) type = 'goblin';
-                            else if (roll < 0.75) type = 'skeleton';
-                            else if (roll < 0.82) type = 'zombie';
-                            else if (roll < 0.88) type = 'orc';
-                            else if (roll < 0.94) type = 'shaman';
-                            else if (roll < 0.98) type = 'ghost';
-                            else type = 'ogre';
+                    // Fallback if no NPCs in map (e.g. old map data or procedural fallback)
+                    if (this.npcs.length === 0) {
+                        const npcData = [
+                            { name: "Elder Aethel", text: ["The Dissonance is growing stronger...", "Please, save our world.", "The dungeon lies to the north."] },
+                            { name: "Blacksmith Gorr", text: ["Need a weapon? Too bad, I'm out of stock.", "Sharp blades are key.", "Don't let the rust get you."] },
+                            { name: "Mystic Mara", text: ["I sense a great power within you.", "The Harmonic Core... it calls to me.", "Beware the shadows."] },
+                            { name: "Villager", text: ["Nice weather today, isn't it?", "I saw a goblin yesterday!", "My sheep are missing."] }
+                        ];
 
-                            // Random position in room
-                            const ex = Math.floor(Math.random() * room.w) + room.x;
-                            const ey = Math.floor(Math.random() * room.h) + room.y;
+                        for (let i = 0; i < 5; i++) {
+                            const room = map.rooms[Math.floor(Math.random() * map.rooms.length)];
+                            const pos = this.mapGenerator.getCenter(room);
+                            const data = npcData[Math.floor(Math.random() * npcData.length)];
+                            this.npcs.push(new NPC(pos.x, pos.y, data.name, data.text));
+                        }
+                    }
+                } else if (this.player?.level === 20) {
+                    // Boss Level
+                    const center = this.mapGenerator.getCenter(map.rooms[map.rooms.length - 1]);
+                    this.enemies.push(new Enemy(center.x, center.y, 'dragon')); // The Dissonance
 
-                            if (map.tiles[ey][ex] === 'floor') {
-                                this.enemies.push(new Enemy(ex, ey, type));
+                    // Place Harmonic Core
+                    const amuletPos = this.mapGenerator.getCenter(map.rooms[Math.floor(map.rooms.length / 2)]);
+                    this.items.push(new HarmonicCore(amuletPos.x, amuletPos.y));
+
+                    this.ui.log('You feel a distortion in time... The Dissonance awaits!', 'important');
+                } else {
+                    for (let i = 1; i < map.rooms.length; i++) {
+                        const room = map.rooms[i];
+
+
+                        // Spawn 1-3 enemies per room
+                        const enemyCount = Math.floor(Math.random() * 3) + 1;
+                        for (let j = 0; j < enemyCount; j++) {
+                            if (Math.random() < 0.9) {
+                                const roll = Math.random();
+                                let type = 'goblin';
+
+                                // Weighted spawn pool - More variety
+                                if (roll < 0.15) type = 'rat';
+                                else if (roll < 0.25) type = 'bat';
+                                else if (roll < 0.35) type = 'spider';
+                                else if (roll < 0.50) type = 'kobold';
+                                else if (roll < 0.65) type = 'goblin';
+                                else if (roll < 0.75) type = 'skeleton';
+                                else if (roll < 0.82) type = 'zombie';
+                                else if (roll < 0.88) type = 'orc';
+                                else if (roll < 0.94) type = 'shaman';
+                                else if (roll < 0.98) type = 'ghost';
+                                else type = 'ogre';
+
+                                // Random position in room
+                                const ex = Math.floor(Math.random() * room.w) + room.x;
+                                const ey = Math.floor(Math.random() * room.h) + room.y;
+
+                                if (map.tiles[ey][ex] === 'floor') {
+                                    this.enemies.push(new Enemy(ex, ey, type));
+                                }
+                            }
+                        }
+
+                        // Chance to spawn item
+                        if (Math.random() < 0.6) {
+                            const ix = Math.floor(Math.random() * room.w) + room.x;
+                            const iy = Math.floor(Math.random() * room.h) + room.y;
+                            if (map.tiles[iy][ix] === 'floor') {
+                                const roll = Math.random();
+                                if (roll < 0.4) {
+                                    this.items.push(new Potion(ix, iy));
+                                } else if (roll < 0.5) {
+                                    this.items.push(new ScrollOfFireball(ix, iy));
+                                } else if (roll < 0.6) {
+                                    this.items.push(new ScrollOfTeleport(ix, iy));
+                                } else if (roll < 0.45) this.items.push(new ScrollOfFrostNova(ix, iy));
+                                else if (roll < 0.55) this.items.push(new ScrollOfChainLightning(ix, iy));
+                                else if (roll < 0.65) this.items.push(new ScrollOfDrainLife(ix, iy));
+                                else if (roll < 0.75) this.items.push(new ScrollOfStoneSkin(ix, iy));
+                                else if (roll < 0.85) this.items.push(new ScrollOfShadowCloak(ix, iy));
+                                else this.items.push(new ScrollOfTimeWarp(ix, iy));
+                            }
+                        }
+                        if (Math.random() < 0.4) {
+                            const kx = Math.floor(Math.random() * room.w) + room.x;
+                            const ky = Math.floor(Math.random() * room.h) + room.y;
+                            if (map.tiles[ky][kx] === 'floor') {
+                                this.items.push(new Key(kx, ky));
+                            }
+                        }
+
+                        // Chance to spawn NPC
+                        if (Math.random() < 0.5) {
+                            const nx = Math.floor(Math.random() * room.w) + room.x;
+                            const ny = Math.floor(Math.random() * room.h) + room.y;
+                            if (map.tiles[ny][nx] === 'floor') {
+                                const names = ["Old Man", "Lost Adventurer", "Mysterious Merchant", "Ghostly Guide"];
+                                const dialogues = [
+                                    "The time fracture is growing...",
+                                    "The Dissonance feeds on our memories.",
+                                    "Seek the Harmonic Core to restore balance.",
+                                    "Beware the shadows of the past...",
+                                    "Aethelgard was once beautiful..."
+                                ];
+                                const name = names[Math.floor(Math.random() * names.length)];
+                                this.npcs.push(new NPC(nx, ny, name, dialogues));
                             }
                         }
                     }
 
-                    // Chance to spawn item
-                    if (Math.random() < 0.6) {
-                        const ix = Math.floor(Math.random() * room.w) + room.x;
-                        const iy = Math.floor(Math.random() * room.h) + room.y;
-                        if (map.tiles[iy][ix] === 'floor') {
-                            const roll = Math.random();
-                            if (roll < 0.4) {
-                                this.items.push(new Potion(ix, iy));
-                            } else if (roll < 0.5) {
-                                this.items.push(new ScrollOfFireball(ix, iy));
-                            } else if (roll < 0.6) {
-                                this.items.push(new ScrollOfTeleport(ix, iy));
-                            } else if (roll < 0.45) this.items.push(new ScrollOfFrostNova(ix, iy));
-                            else if (roll < 0.55) this.items.push(new ScrollOfChainLightning(ix, iy));
-                            else if (roll < 0.65) this.items.push(new ScrollOfDrainLife(ix, iy));
-                            else if (roll < 0.75) this.items.push(new ScrollOfStoneSkin(ix, iy));
-                            else if (roll < 0.85) this.items.push(new ScrollOfShadowCloak(ix, iy));
-                            else this.items.push(new ScrollOfTimeWarp(ix, iy));
-                        }
-                    }
-
-                    // Chance to spawn Key
-                    if (Math.random() < 0.4) {
-                        const kx = Math.floor(Math.random() * room.w) + room.x;
-                        const ky = Math.floor(Math.random() * room.h) + room.y;
+                    // Guaranteed Key Spawning to prevent soft-locks
+                    const spawnKey = (r: Room) => {
+                        const kx = Math.floor(Math.random() * r.w) + r.x;
+                        const ky = Math.floor(Math.random() * r.h) + r.y;
                         if (map.tiles[ky][kx] === 'floor') {
                             this.items.push(new Key(kx, ky));
                         }
-                    }
+                    };
 
-                    // Chance to spawn NPC
-                    if (Math.random() < 0.5) {
-                        const nx = Math.floor(Math.random() * room.w) + room.x;
-                        const ny = Math.floor(Math.random() * room.h) + room.y;
-                        if (map.tiles[ny][nx] === 'floor') {
-                            const names = ["Old Man", "Lost Adventurer", "Mysterious Merchant", "Ghostly Guide"];
-                            const dialogues = [
-                                "The time fracture is growing...",
-                                "The Dissonance feeds on our memories.",
-                                "Seek the Harmonic Core to restore balance.",
-                                "Beware the shadows of the past...",
-                                "Aethelgard was once beautiful..."
-                            ];
-                            const name = names[Math.floor(Math.random() * names.length)];
-                            this.npcs.push(new NPC(nx, ny, name, dialogues));
+                    for (let i = 0; i < map.rooms.length; i++) {
+                        const room = map.rooms[i];
+                        let hasDoor = false;
+
+                        // Check Top/Bottom
+                        for (let x = room.x; x < room.x + room.w; x++) {
+                            if (this.map.tiles[room.y - 1] && this.map.tiles[room.y - 1][x] === 'door_closed') hasDoor = true;
+                            if (this.map.tiles[room.y + room.h] && this.map.tiles[room.y + room.h][x] === 'door_closed') hasDoor = true;
+                        }
+                        // Check Left/Right
+                        for (let y = room.y; y < room.y + room.h; y++) {
+                            if (this.map.tiles[y][room.x - 1] === 'door_closed') hasDoor = true;
+                            if (this.map.tiles[y][room.x + room.w] === 'door_closed') hasDoor = true;
+                        }
+
+                        if (hasDoor) {
+                            if (i > 0) spawnKey(this.map.rooms[i - 1]);
+                            spawnKey(room);
                         }
                     }
-                }
 
-                // Guaranteed Key Spawning to prevent soft-locks
-                const spawnKey = (r: Room) => {
-                    const kx = Math.floor(Math.random() * r.w) + r.x;
-                    const ky = Math.floor(Math.random() * r.h) + r.y;
-                    if (map.tiles[ky][kx] === 'floor') {
-                        this.items.push(new Key(kx, ky));
-                    }
-                };
-
-                for (let i = 0; i < map.rooms.length; i++) {
-                    const room = map.rooms[i];
-                    let hasDoor = false;
-
-                    // Check Top/Bottom
-                    for (let x = room.x; x < room.x + room.w; x++) {
-                        if (this.map.tiles[room.y - 1] && this.map.tiles[room.y - 1][x] === 'door_closed') hasDoor = true;
-                        if (this.map.tiles[room.y + room.h] && this.map.tiles[room.y + room.h][x] === 'door_closed') hasDoor = true;
-                    }
-                    // Check Left/Right
-                    for (let y = room.y; y < room.y + room.h; y++) {
-                        if (this.map.tiles[y][room.x - 1] === 'door_closed') hasDoor = true;
-                        if (this.map.tiles[y][room.x + room.w] === 'door_closed') hasDoor = true;
-                    }
-
-                    if (hasDoor) {
-                        if (i > 0) spawnKey(this.map.rooms[i - 1]);
-                        spawnKey(room);
+                    while (this.enemies.length < 3) {
+                        let ex, ey;
+                        do {
+                            ex = Math.floor(Math.random() * this.map.width);
+                            ey = Math.floor(Math.random() * this.map.height);
+                        } while (this.map.tiles[ey][ex] === 'wall');
+                        this.enemies.push(new Enemy(ex, ey));
                     }
                 }
+            } else {
+                // Cave Level Spawning
+                let px, py;
+                do {
+                    px = Math.floor(Math.random() * this.map.width);
+                    py = Math.floor(Math.random() * this.map.height);
+                } while (this.map.tiles[py][px] === 'wall');
 
-                while (this.enemies.length < 3) {
+                if (!this.player) {
+                    this.player = new Player(px, py, this.playerClass);
+                } else {
+                    this.player.x = px;
+                    this.player.y = py;
+                }
+                this.enemies = [];
+                this.items = [];
+                this.npcs = [];
+
+                // Spawn Enemies (Cave)
+                const totalEnemies = 15 + Math.floor(Math.random() * 6); // 15-20 enemies
+                for (let i = 0; i < totalEnemies; i++) {
                     let ex, ey;
                     do {
                         ex = Math.floor(Math.random() * this.map.width);
                         ey = Math.floor(Math.random() * this.map.height);
-                    } while (this.map.tiles[ey][ex] === 'wall');
-                    this.enemies.push(new Enemy(ex, ey));
+                    } while (this.map.tiles[ey][ex] === 'wall' || (ex === px && ey === py));
+
+                    const roll = Math.random();
+                    let type = 'goblin';
+
+                    if (roll < 0.15) type = 'rat';
+                    else if (roll < 0.25) type = 'bat';
+                    else if (roll < 0.35) type = 'spider';
+                    else if (roll < 0.50) type = 'kobold';
+                    else if (roll < 0.65) type = 'goblin';
+                    else if (roll < 0.75) type = 'skeleton';
+                    else if (roll < 0.82) type = 'zombie';
+                    else if (roll < 0.88) type = 'orc';
+                    else if (roll < 0.94) type = 'shaman';
+                    else if (roll < 0.98) type = 'ghost';
+                    else type = 'ogre';
+
+                    this.enemies.push(new Enemy(ex, ey, type));
                 }
-            }
 
-        } else {
-            // Cave Level Spawning
-            let px, py;
-            do {
-                px = Math.floor(Math.random() * this.map.width);
-                py = Math.floor(Math.random() * this.map.height);
-            } while (this.map.tiles[py][px] === 'wall');
+                // Spawn Items
+                for (let i = 0; i < 4; i++) {
+                    let ix, iy;
+                    do {
+                        ix = Math.floor(Math.random() * this.map.width);
+                        iy = Math.floor(Math.random() * this.map.height);
+                    } while (this.map.tiles[iy][ix] === 'wall');
 
-            if (!this.player) {
-                this.player = new Player(px, py, this.playerClass);
-            } else {
-                this.player.x = px;
-                this.player.y = py;
-            }
-            this.enemies = [];
-            this.items = [];
-            this.npcs = [];
-
-            // Spawn Enemies (Cave)
-            const totalEnemies = 15 + Math.floor(Math.random() * 6); // 15-20 enemies
-            for (let i = 0; i < totalEnemies; i++) {
-                let ex, ey;
-                do {
-                    ex = Math.floor(Math.random() * this.map.width);
-                    ey = Math.floor(Math.random() * this.map.height);
-                } while (this.map.tiles[ey][ex] === 'wall' || (ex === px && ey === py));
-
-                const roll = Math.random();
-                let type = 'goblin';
-
-                if (roll < 0.15) type = 'rat';
-                else if (roll < 0.25) type = 'bat';
-                else if (roll < 0.35) type = 'spider';
-                else if (roll < 0.50) type = 'kobold';
-                else if (roll < 0.65) type = 'goblin';
-                else if (roll < 0.75) type = 'skeleton';
-                else if (roll < 0.82) type = 'zombie';
-                else if (roll < 0.88) type = 'orc';
-                else if (roll < 0.94) type = 'shaman';
-                else if (roll < 0.98) type = 'ghost';
-                else type = 'ogre';
-
-                this.enemies.push(new Enemy(ex, ey, type));
-            }
-
-            // Spawn Items
-            for (let i = 0; i < 4; i++) {
-                let ix, iy;
-                do {
-                    ix = Math.floor(Math.random() * this.map.width);
-                    iy = Math.floor(Math.random() * this.map.height);
-                } while (this.map.tiles[iy][ix] === 'wall');
-
-                const roll = Math.random();
-                if (roll < 0.4) {
-                    this.items.push(new Potion(ix, iy));
-                } else if (roll < 0.5) {
-                    this.items.push(new ScrollOfFireball(ix, iy));
-                } else if (roll < 0.6) {
-                    this.items.push(new ScrollOfTeleport(ix, iy));
-                } else if (roll < 0.8) {
-                    const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
-                    this.items.push(new Weapon(ix, iy, tier));
-                } else {
-                    const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
-                    this.items.push(new Armor(ix, iy, tier));
+                    const roll = Math.random();
+                    if (roll < 0.4) {
+                        this.items.push(new Potion(ix, iy));
+                    } else if (roll < 0.5) {
+                        this.items.push(new ScrollOfFireball(ix, iy));
+                    } else if (roll < 0.6) {
+                        this.items.push(new ScrollOfTeleport(ix, iy));
+                    } else if (roll < 0.8) {
+                        const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
+                        this.items.push(new Weapon(ix, iy, tier));
+                    } else {
+                        const tier = Math.min(4, Math.floor(this.player.level / 2) + 1);
+                        this.items.push(new Armor(ix, iy, tier));
+                    }
                 }
             }
         }
 
+        // Common Initialization for all levels
         this.renderer.initMap(this.map);
+        this.fov = new FOV(this.map);
         this.updateFOV();
-        this.log(`Entered Level ${this.player.level}`, 'important');
+
+        // Load NPCs from Map Data
+        this.npcs = [];
+        if (this.map.npcs) {
+            this.map.npcs.forEach(npcData => {
+                this.npcs.push(new NPC(npcData.x, npcData.y, npcData.name, npcData.dialogues, npcData.image));
+            });
+        }
+
+
+        // Fallback for Village NPCs if missing
+        if (this.player?.level === 0 && this.npcs.length === 0) {
+            const npcData = [
+                { name: "Elder Aethel", text: ["The Dissonance is growing stronger...", "Please, save our world.", "The dungeon lies to the north."], image: "assets/elder.svg" },
+                { name: "Blacksmith Gorr", text: ["Need a weapon? Too bad, I'm out of stock.", "Sharp blades are key.", "Don't let the rust get you."] },
+                { name: "Mystic Mara", text: ["I sense a great power within you.", "The Harmonic Core... it calls to me.", "Beware the shadows."] },
+                { name: "Villager", text: ["Nice weather today, isn't it?", "I saw a goblin yesterday!", "My sheep are missing."] }
+            ];
+
+            for (let i = 0; i < 5; i++) {
+                const room = this.map.rooms[Math.floor(Math.random() * this.map.rooms.length)];
+                const pos = this.mapGenerator.getCenter(room);
+                const data = npcData[Math.floor(Math.random() * npcData.length)];
+                // @ts-ignore
+                this.npcs.push(new NPC(pos.x, pos.y, data.name, data.text, data.image));
+            }
+        }
+
+        if (this.player?.level === 0) {
+            this.ui.log("Welcome to the Village of Oakhaven.", 'important');
+        } else {
+            this.ui.log(`Entered Level ${this.player.level}`, 'important');
+        }
 
         // Update Music based on Level and Combat State
         this.updateMusic();
@@ -540,6 +625,8 @@ export default class Game {
 
         if (this.player!.level === 20) {
             this.audio.playTheme('boss');
+        } else if (this.player!.level === 0) {
+            this.audio.playTheme('village');
         } else if (inCombat) {
             this.audio.playCombatTheme();
         } else {
@@ -556,6 +643,13 @@ export default class Game {
     }
 
     handleInput(e: KeyboardEvent) {
+        if (this.ui.isDialogueOpen()) {
+            if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+                this.ui.hideDialogue();
+            }
+            return;
+        }
+
         if (this.gameState === 'GAMEOVER' || this.gameState === 'VICTORY') {
             if (e.key === 'Enter' || e.key === 'r') {
                 this.restart();
@@ -606,8 +700,9 @@ export default class Game {
                 // Check for NPC
                 const npc = this.npcs.find(n => n.x === targetX && n.y === targetY);
                 if (npc) {
-                    const message = npc.interact();
-                    this.log(`${npc.name}: "${message}"`, 'info');
+                    const interaction = npc.interact();
+                    this.ui.showDialogue(npc.name, interaction.text, interaction.image);
+                    // this.ui.log(`${npc.name}: "${message}"`, 'info');
                     this.update();
                     return;
                 }
@@ -616,16 +711,16 @@ export default class Game {
                 if (tile === 'door_closed') {
                     const keyIndex = this.player.inventory.findIndex(i => i.name === 'Golden Key');
                     if (keyIndex !== -1) {
-                        this.log("You unlock the door with your key.", 'success');
+                        this.ui.log("You unlock the door with your key.", 'success');
                         this.map.tiles[targetY][targetX] = 'door_open';
                         this.player.inventory.splice(keyIndex, 1);
-                        this.updateUI();
+                        this.ui.updateUI(this.player);
                         this.audio.playSound('pickup'); // Reuse sound for now
                         this.isPlayerTurn = false;
                         this.update();
                         setTimeout(() => this.enemyTurn(), 100);
                     } else {
-                        this.log("The door is locked. You need a key.", 'warning');
+                        this.ui.log("The door is locked. You need a key.", 'warning');
                     }
                 } else {
                     const moved = this.player.move(command.dx, command.dy, this.map);
@@ -635,7 +730,7 @@ export default class Game {
 
                         if (this.extraTurns > 0) {
                             this.extraTurns--;
-                            this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
+                            this.ui.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
                             this.update();
                         } else {
                             this.isPlayerTurn = false;
@@ -646,19 +741,42 @@ export default class Game {
                 }
             }
         } else if (command.type === 'interact') {
-            this.checkStairs();
+            // Check for adjacent NPCs
+            let interacted = false;
+            if (this.player) {
+                const neighbors = [
+                    { x: this.player.x + 1, y: this.player.y },
+                    { x: this.player.x - 1, y: this.player.y },
+                    { x: this.player.x, y: this.player.y + 1 },
+                    { x: this.player.x, y: this.player.y - 1 }
+                ];
+
+                for (const pos of neighbors) {
+                    const npc = this.npcs.find(n => n.x === pos.x && n.y === pos.y);
+                    if (npc) {
+                        const interaction = npc.interact();
+                        this.ui.showDialogue(npc.name, interaction.text, interaction.image);
+                        interacted = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!interacted) {
+                this.checkStairs();
+            }
         } else if (command.type === 'pickup') {
             this.pickupItem();
         } else if (command.type === 'inventory') {
-            this.toggleInventory();
+            this.ui.toggleInventory(this.player);
         } else if (command.type === 'spellbook') {
-            this.toggleSpellBook();
+            this.ui.toggleSpellBook(this.player);
         } else if (command.type === 'cast') {
             if (command.spellIndex < this.player.spells.length) {
                 this.castSpell(command.spellIndex);
             }
         } else if (command.type === 'wait') {
-            this.log("You wait...", 'info');
+            this.ui.log("You wait...", 'info');
             this.isPlayerTurn = false;
             this.update();
             setTimeout(() => this.enemyTurn(), 100);
@@ -669,7 +787,7 @@ export default class Game {
         if (!this.player || !this.map) return;
         const spell = this.player.spells[index];
         if (this.player.mana < spell.cost) {
-            this.log(`Not enough mana for ${spell.name}!`, 'warning');
+            this.ui.log(`Not enough mana for ${spell.name}!`, 'warning');
             return;
         }
 
@@ -704,38 +822,38 @@ export default class Game {
         if (spell.type === 'heal' && spell.heal) {
             if (this.player.hp < this.player.maxHp) {
                 this.player.hp = Math.min(this.player.hp + spell.heal, this.player.maxHp);
-                this.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
+                this.ui.log(`You cast ${spell.name} and heal for ${spell.heal} HP.`, 'magic');
                 this.renderer.triggerEffect(this.player.x, this.player.y, 'heal');
                 this.audio.playSound('magic');
                 cast = true;
             } else {
-                this.log("You are already at full health.", 'warning');
+                this.ui.log("You are already at full health.", 'warning');
             }
         } else if (spell.type === 'damage' && spell.damage && spell.range) {
             const target = getNearestEnemy(spell.range);
             if (target) {
                 target.hp -= spell.damage;
-                this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
+                this.ui.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
                 this.renderer.playAnimation(target, 'hit');
                 this.audio.playSound('magic');
                 if (target.hp <= 0) targets.push(target); // Mark for cleanup
                 cast = true;
             } else {
-                this.log("No enemy in range.", 'warning');
+                this.ui.log("No enemy in range.", 'warning');
             }
         } else if (spell.type === 'freeze' && spell.range) {
             const enemies = getEnemiesInRange(spell.range);
             if (enemies.length > 0) {
                 enemies.forEach(e => {
                     e.frozen = 3;
-                    this.log(`${e.type} is frozen!`, 'magic');
+                    this.ui.log(`${e.type} is frozen!`, 'magic');
                     this.renderer.triggerEffect(e.x, e.y, 'freeze');
                 });
                 this.audio.playSound('magic');
                 cast = true;
             } else {
-                this.log("No enemies in range to freeze.", 'warning');
+                this.ui.log("No enemies in range to freeze.", 'warning');
             }
         } else if (spell.type === 'chain_lightning' && spell.damage && spell.range) {
             let currentTarget = getNearestEnemy(spell.range);
@@ -746,7 +864,7 @@ export default class Game {
 
                 while (bounces > 0 && currentTarget) {
                     currentTarget.hp -= damage;
-                    this.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
+                    this.ui.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
                     this.renderer.triggerEffect(currentTarget.x, currentTarget.y, 'hit');
                     this.renderer.playAnimation(currentTarget, 'hit');
                     hitEnemies.add(currentTarget);
@@ -772,7 +890,7 @@ export default class Game {
                 this.audio.playSound('magic');
                 cast = true;
             } else {
-                this.log("No enemy in range.", 'warning');
+                this.ui.log("No enemy in range.", 'warning');
             }
         } else if (spell.type === 'drain' && spell.damage && spell.range) {
             const target = getNearestEnemy(spell.range);
@@ -780,23 +898,23 @@ export default class Game {
                 target.hp -= spell.damage;
                 const heal = Math.floor(spell.damage / 2);
                 this.player.hp = Math.min(this.player.hp + heal, this.player.maxHp);
-                this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
+                this.ui.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
                 this.renderer.playAnimation(target, 'hit');
                 if (target.hp <= 0) targets.push(target);
                 this.audio.playSound('magic');
                 cast = true;
             } else {
-                this.log("No enemy in range.", 'warning');
+                this.ui.log("No enemy in range.", 'warning');
             }
         } else if ((spell.type === 'buff' || spell.type === 'invisibility') && spell.duration) {
             this.player.addBuff({ type: spell.type, duration: spell.duration, amount: spell.defense });
-            this.log(`You cast ${spell.name}!`, 'magic');
+            this.ui.log(`You cast ${spell.name}!`, 'magic');
             this.audio.playSound('magic');
             cast = true;
         } else if (spell.type === 'time_warp' && spell.turns) {
             this.extraTurns += spell.turns;
-            this.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
+            this.ui.log(`Time warps! You gain ${spell.turns} extra turns.`, 'magic');
             this.audio.playSound('magic');
             cast = true;
         } else if (spell.type === 'teleport') {
@@ -811,7 +929,7 @@ export default class Game {
             if (this.map.tiles[ty][tx] !== 'wall') {
                 this.player.x = tx;
                 this.player.y = ty;
-                this.log("You vanish into the shadows!", 'magic');
+                this.ui.log("You vanish into the shadows!", 'magic');
                 this.updateFOV();
                 this.audio.playSound('magic');
                 cast = true;
@@ -822,7 +940,7 @@ export default class Game {
         if (targets.length > 0) {
             targets.forEach(t => {
                 if (this.enemies.includes(t) && this.player) { // Check if still in list (duplicates from chain lightning)
-                    this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
+                    this.ui.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
                     this.player.gainXp(t.xpValue || 10);
                     this.renderer.removeEntity(t); // Remove mesh
                 }
@@ -832,11 +950,11 @@ export default class Game {
 
         if (cast) {
             this.player.mana -= spell.cost;
-            this.updateUI();
+            this.ui.updateUI(this.player);
 
             if (this.extraTurns > 0) {
                 this.extraTurns--;
-                this.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
+                this.ui.log(`Extra turn! (${this.extraTurns} remaining)`, 'magic');
                 // Do not end turn
             } else {
                 this.isPlayerTurn = false;
@@ -856,55 +974,15 @@ export default class Game {
             this.player.inventory.push(item);
             this.items.splice(itemIndex, 1);
             this.renderer.removeEntity(item); // Remove mesh
-            this.log(`Picked up ${item.name}`, 'pickup');
+            this.ui.log(`Picked up ${item.name}`, 'pickup');
             this.audio.playSound('pickup');
-            this.updateUI();
+            this.ui.updateUI(this.player);
         } else {
-            this.log("Nothing to pick up here.", 'warning');
+            this.ui.log("Nothing to pick up here.", 'warning');
         }
     }
 
-    toggleInventory() {
-        const invEl = document.getElementById('inventory-overlay');
-        if (invEl) {
-            if (invEl.style.display === 'none' || !invEl.style.display) {
-                invEl.style.display = 'block';
-                this.renderInventory();
-            } else {
-                invEl.style.display = 'none';
-            }
-        }
-    }
 
-    renderInventory() {
-        if (!this.player) return;
-        const list = document.getElementById('inventory-list');
-        if (!list) return;
-        list.innerHTML = '';
-
-        if (this.player.inventory.length === 0) {
-            list.innerHTML = '<li>Empty</li>';
-            return;
-        }
-
-        this.player.inventory.forEach((item, index) => {
-            const li = document.createElement('li');
-            let text = `${item.name}`;
-            if (item instanceof Weapon) text += ` (Dmg: ${item.bonus})`;
-            if (item instanceof Armor) text += ` (Def: ${item.bonus})`;
-
-            // Check if equipped
-            if (this.player!.equipment.weapon === item) text += ' [Equipped]';
-            if (this.player!.equipment.armor === item) text += ' [Equipped]';
-
-            li.textContent = text;
-            li.onclick = () => {
-                this.useItem(index);
-                // Re-render handled in useItem
-            };
-            list.appendChild(li);
-        });
-    }
 
     useItem(index: number) {
         if (!this.player) return;
@@ -925,7 +1003,7 @@ export default class Game {
             }
 
             if (used) {
-                this.log(`Used/Equipped ${item.name}`, 'action');
+                this.ui.log(`Used/Equipped ${item.name}`, 'action');
                 // Only remove if it's NOT equipment (Equipment.use returns true but stays in inventory usually, logic depends on Equipment.ts)
                 // Wait, Equipment.use calls player.equip which returns true.
                 // We shouldn't remove equipment from inventory when equipping.
@@ -935,22 +1013,18 @@ export default class Game {
                     this.player.inventory.splice(index, 1);
                 }
 
-                this.renderInventory();
-                this.updateUI();
+                this.ui.renderInventory(this.player);
+                this.ui.updateUI(this.player);
                 this.isPlayerTurn = false;
                 setTimeout(() => this.enemyTurn(), 100);
                 this.audio.playSound('pickup');
             } else {
-                this.log(`Cannot use ${item.name} right now.`, 'warning');
+                this.ui.log(`Cannot use ${item.name} right now.`, 'warning');
             }
         }
     }
 
-    toggleSpellBook() {
-        // Placeholder for spellbook UI if needed, or just use updateUI list
-        // For now, spells are always visible in UI sidebar
-        this.log("Spells are listed in the sidebar.", 'info');
-    }
+
 
     checkStairs() {
         if (!this.player || !this.map) return;
@@ -959,7 +1033,7 @@ export default class Game {
             this.generateLevel();
             this.update();
         } else {
-            this.log("There are no stairs here.", 'warning');
+            this.ui.log("There are no stairs here.", 'warning');
         }
     }
 
@@ -981,24 +1055,24 @@ export default class Game {
                 if (target === this.player) {
                     if (attackType === 'magic') {
                         const damage = 10; // Magic damage
-                        this.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
+                        this.ui.log(`${enemy.char} casts a spell on you for ${damage} dmg!`, 'danger');
                         this.player.hp -= damage;
                         this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
                         this.renderer.createFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff0000');
                     } else if (attackType === 'firebreath') {
                         const damage = 25;
-                        this.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
+                        this.ui.log(`${enemy.char} breathes FIRE on you for ${damage} dmg!`, 'danger');
                         this.player.hp -= damage;
                         this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
                         this.renderer.createFloatingText(this.player.x, this.player.y, `-${damage}`, '#ff4400');
                     } else {
                         const result = this.combatSystem.resolveAttack(enemy, this.player);
                         if (result.hit) {
-                            this.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
+                            this.ui.log(`${enemy.char} hits you for ${result.damage} dmg!`, 'danger');
                             this.renderer.triggerEffect(this.player.x, this.player.y, 'hit');
                             this.renderer.createFloatingText(this.player.x, this.player.y, `-${result.damage}`, '#ff0000');
                         } else {
-                            this.log(`${enemy.char} misses you!`, 'info');
+                            this.ui.log(`${enemy.char} misses you!`, 'info');
                             this.renderer.createFloatingText(this.player.x, this.player.y, "Miss", '#aaa');
                         }
                     }
@@ -1010,7 +1084,7 @@ export default class Game {
                         const damage = 10;
                         enemyTarget.hp -= damage;
                         if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
-                            this.log(`${enemy.char} blasts ${enemyTarget.char} for ${damage} dmg!`, 'warning');
+                            this.ui.log(`${enemy.char} blasts ${enemyTarget.char} for ${damage} dmg!`, 'warning');
                             this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
                             this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${damage}`, '#ff9100');
                         }
@@ -1018,7 +1092,7 @@ export default class Game {
                         const damage = 25;
                         enemyTarget.hp -= damage;
                         if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
-                            this.log(`${enemy.char} burns ${enemyTarget.char} for ${damage} dmg!`, 'warning');
+                            this.ui.log(`${enemy.char} burns ${enemyTarget.char} for ${damage} dmg!`, 'warning');
                             this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
                             this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${damage}`, '#ff4400');
                         }
@@ -1026,7 +1100,7 @@ export default class Game {
                         const result = this.combatSystem.resolveAttack(enemy, enemyTarget);
                         if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
                             if (result.hit) {
-                                this.log(`${enemy.char} hits ${enemyTarget.char} for ${result.damage} dmg!`, 'warning');
+                                this.ui.log(`${enemy.char} hits ${enemyTarget.char} for ${result.damage} dmg!`, 'warning');
                                 this.renderer.triggerEffect(enemyTarget.x, enemyTarget.y, 'hit');
                                 this.renderer.createFloatingText(enemyTarget.x, enemyTarget.y, `-${result.damage}`, '#ff9100');
                             } else {
@@ -1037,7 +1111,7 @@ export default class Game {
 
                     if (enemyTarget.hp <= 0) {
                         if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
-                            this.log(`${enemyTarget.char} is killed by ${enemy.char}!`, 'success');
+                            this.ui.log(`${enemyTarget.char} is killed by ${enemy.char}!`, 'success');
                         }
                         this.renderer.removeEntity(enemyTarget); // Remove mesh
                         this.enemies = this.enemies.filter(e => e !== enemyTarget);
@@ -1060,26 +1134,26 @@ export default class Game {
         const result = this.combatSystem.resolveAttack(this.player, enemy);
 
         if (result.hit) {
-            this.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
+            this.ui.log(`You hit ${enemy.char} for ${result.damage} dmg!`, 'combat');
             this.audio.playSound('hit');
             this.renderer.triggerEffect(enemy.x, enemy.y, 'hit');
             this.renderer.createFloatingText(enemy.x, enemy.y, `-${result.damage}`, '#ff4444');
 
             if (result.killed) {
-                this.log(`${enemy.char} dies! +10 XP`, 'success');
+                this.ui.log(`${enemy.char} dies! +10 XP`, 'success');
                 this.player.gainXp(10);
                 // Remove enemy
                 this.renderer.removeEntity(enemy); // Remove mesh
                 this.enemies = this.enemies.filter(e => e !== enemy);
             }
         } else {
-            this.log(`You miss ${enemy.char}!`, 'info');
+            this.ui.log(`You miss ${enemy.char}!`, 'info');
             this.renderer.createFloatingText(enemy.x, enemy.y, "Miss", '#aaa');
         }
     }
 
     update() {
-        if (this.player && this.map) {
+        if (this.player && this.map && this.fov) {
             // this.renderer.updateCamera(this.player, this.map); // Handled by ThreeRenderer.render
             this.visibleTiles = this.fov.compute(this.player.x, this.player.y, 8);
 
@@ -1090,32 +1164,19 @@ export default class Game {
         }
 
         this.draw();
-        this.updateUI();
+        this.ui.updateUI(this.player);
 
         // Check music state occasionally (every 30 frames or so would be better, but per update is fine for now as playTheme checks currentTheme)
         this.updateMusic();
 
-        if (this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
+        if (this.player && this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
             this.gameState = 'GAMEOVER';
             document.getElementById('game-over').style.display = 'flex';
-            this.log("You have died...", 'important');
+            this.ui.log("You have died...", 'important');
         }
     }
 
-    log(message: string, type: string = 'info') {
-        const logEl = document.getElementById('log');
-        if (!logEl) return;
-        const entry = document.createElement('div');
-        entry.classList.add('log-entry');
-        if (type) entry.classList.add(type);
-        entry.innerText = message;
-        logEl.prepend(entry);
-        if (logEl.children.length > 50) {
-            if (logEl.lastChild) {
-                logEl.removeChild(logEl.lastChild);
-            }
-        }
-    }
+
 
     loop() {
         requestAnimationFrame(() => this.loop());
@@ -1174,56 +1235,75 @@ export default class Game {
 
             // Draw Lighting Overlay (Handled by Three.js lights now)
             if (this.map) {
-                this.renderer.drawLighting(this.player!, this.map);
+                // this.renderer.drawLighting(); 
             }
 
             // Draw Minimap
             if (this.map) {
-                this.renderer.drawMinimap(this.map, this.player!, this.exploredTiles);
+                this.drawMinimap();
             }
         }
 
         this.renderer.drawEffects();
-        this.updateUI();
+        this.ui.updateUI(this.player);
     }
 
-    updateUI() {
-        if (!this.player) return;
 
-        const hpVal = document.getElementById('hp-val');
-        if (hpVal) hpVal.innerText = `${this.player.hp}/${this.player.maxHp}`;
-
-        const manaEl = document.getElementById('mana-val');
-        if (manaEl) manaEl.innerText = `${this.player.mana}/${this.player.maxMana}`;
-
-        const lvlVal = document.getElementById('lvl-val');
-        if (lvlVal) lvlVal.innerText = this.player.level.toString();
-
-        const atkVal = document.getElementById('atk-val');
-        if (atkVal) atkVal.innerText = this.player.getAttack().toString();
-
-        const defVal = document.getElementById('def-val');
-        if (defVal) defVal.innerText = this.player.getDefense().toString();
-
-        const weaponVal = document.getElementById('weapon-val');
-        if (weaponVal) weaponVal.innerText = this.player.equipment.weapon ? this.player.equipment.weapon.name : 'None';
-
-        const armorVal = document.getElementById('armor-val');
-        if (armorVal) armorVal.innerText = this.player.equipment.armor ? this.player.equipment.armor.name : 'None';
-
-        // Update Spells List
-        const spellsList = document.getElementById('spells-list');
-        if (spellsList) {
-            spellsList.innerHTML = '';
-            this.player.spells.forEach((spell, i) => {
-                const li = document.createElement('li');
-                li.innerText = `${i + 1}. ${spell.name} (${spell.cost} MP)`;
-                spellsList.appendChild(li);
-            });
-        }
-    }
 
     restart() {
         location.reload();
+    }
+
+    drawMinimap() {
+        if (!this.minimapCtx || !this.minimapCanvas || !this.map || !this.player) return;
+
+        const ctx = this.minimapCtx;
+        const canvas = this.minimapCanvas;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const tileSize = 5; // Pixels per tile
+        const viewRange = Math.floor(canvas.width / tileSize / 2); // Tiles in each direction
+
+        const startX = this.player.x - viewRange;
+        const startY = this.player.y - viewRange;
+
+        for (let y = 0; y < canvas.height / tileSize; y++) {
+            for (let x = 0; x < canvas.width / tileSize; x++) {
+                const mapX = startX + x;
+                const mapY = startY + y;
+
+                if (mapX >= 0 && mapX < this.map.width && mapY >= 0 && mapY < this.map.height) {
+                    const key = `${mapX},${mapY}`;
+                    if (this.exploredTiles.has(key) || this.player.level === 0) { // Always show village
+                        const tile = this.map.tiles[mapY][mapX];
+                        if (tile.startsWith('wall') || tile === 'door_closed') {
+                            ctx.fillStyle = '#555';
+                        } else if (tile === 'stairs') {
+                            ctx.fillStyle = '#ffff00';
+                        } else {
+                            ctx.fillStyle = '#222';
+                        }
+
+                        if (mapX === this.player.x && mapY === this.player.y) {
+                            ctx.fillStyle = '#00ff00';
+                        } else if (this.visibleTiles.has(key)) {
+                            // Show enemies if visible
+                            const enemy = this.enemies.find(e => e.x === mapX && e.y === mapY);
+                            if (enemy) ctx.fillStyle = '#ff0000';
+                            const npc = this.npcs.find(n => n.x === mapX && n.y === mapY);
+                            if (npc) ctx.fillStyle = '#00ffff';
+                        }
+
+                        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
     }
 }

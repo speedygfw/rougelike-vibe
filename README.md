@@ -39,10 +39,13 @@ But beware... the echoes of the past are not always friendly. You must descend 2
     *   **Rogue**: A stealthy assassin with high critical hit chance.
 *   **Spell Book System**: Learn and cast powerful magic like *Fireball*, *Chain Lightning*, and *Time Warp*. Press **'B'** to manage your spells.
 *   **Dynamic World**:
+    *   **Village Hub**: Start in the peaceful village of Oakhaven, talk to NPCs, and prepare for your journey.
     *   **NPCs**: Meet friendly characters who offer lore and advice.
     *   **Factions**: Watch enemies fight each other (e.g., Skeletons vs. Goblins).
     *   **Varied Environments**: Traverse classic brick dungeons and organic cave systems.
-*   **Modern UI**: A sleek "Dark Glass" interface with animations and clear feedback.
+*   **Modern UI**: 
+    *   **Minimap**: Keep track of your exploration with a real-time minimap.
+    *   Sleek "Dark Glass" interface with animations and clear feedback.
 
 ## 🎮 How to Play
 

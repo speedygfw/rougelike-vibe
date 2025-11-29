@@ -156,6 +156,23 @@ export default class AudioSystem {
                 { note: 220, type: 'square', duration: 0.25 }, // A3
                 { note: 0, type: 'rest', duration: 0.25 },
             ];
+        } else if (themeName === 'village') {
+            // Happy, Medieval, Flute-like
+            // Major Scale (C Major: C, D, E, F, G, A, B)
+            sequence = [
+                { note: 261.63, type: 'triangle', duration: 0.5 }, // C4
+                { note: 293.66, type: 'triangle', duration: 0.5 }, // D4
+                { note: 329.63, type: 'triangle', duration: 0.5 }, // E4
+                { note: 392.00, type: 'triangle', duration: 0.5 }, // G4
+                { note: 329.63, type: 'triangle', duration: 0.5 }, // E4
+                { note: 293.66, type: 'triangle', duration: 0.5 }, // D4
+                { note: 261.63, type: 'triangle', duration: 1.0 }, // C4
+                { note: 0, type: 'rest', duration: 0.5 },
+                { note: 392.00, type: 'triangle', duration: 0.5 }, // G4
+                { note: 329.63, type: 'triangle', duration: 0.5 }, // E4
+                { note: 440.00, type: 'triangle', duration: 0.5 }, // A4
+                { note: 392.00, type: 'triangle', duration: 1.0 }, // G4
+            ];
         }
 
         let noteIndex = 0;

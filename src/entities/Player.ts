@@ -45,7 +45,7 @@ export default class Player extends Entity {
         this.classType = classType;
         this.hp = 100;
         this.maxHp = 100;
-        this.level = 1;
+        this.level = 0;
         this.xp = 0;
         this.xpToNextLevel = 100;
         this.inventory = [];

@@ -6,7 +6,10 @@ export interface MapData {
     tiles: string[][];
     rooms: Room[];
     props: Prop[];
+    npcs: NPCData[];
     theme?: any;
+    startX?: number;
+    startY?: number;
 }
 
 export interface Room {
@@ -21,6 +24,14 @@ export interface Prop {
     y: number;
     type: string;
     char: string;
+}
+
+export interface NPCData {
+    x: number;
+    y: number;
+    name: string;
+    dialogues: string[];
+    image?: string;
 }
 
 export default class MapGenerator {
@@ -42,7 +53,6 @@ export default class MapGenerator {
             map = this.generateCaves();
         }
         this.decorateMap(map);
-        map.theme = getRandomTheme();
         return map;
     }
 
@@ -52,7 +62,8 @@ export default class MapGenerator {
             height: this.height,
             tiles: [],
             rooms: [], // Caves don't have explicit rooms
-            props: []
+            props: [],
+            npcs: []
         };
 
         // Initialize with noise
@@ -106,13 +117,183 @@ export default class MapGenerator {
         return map;
     }
 
+    generateVillage(): MapData {
+        const map: MapData = {
+            width: this.width,
+            height: this.height,
+            tiles: [],
+            rooms: [],
+            props: [],
+            npcs: []
+        };
+
+        // Fill with grass
+        for (let y = 0; y < this.height; y++) {
+            const row: string[] = [];
+            for (let x = 0; x < this.width; x++) {
+                row.push('floor_grass');
+            }
+            map.tiles.push(row);
+        }
+
+        // Create Walls around the village
+        for (let x = 0; x < this.width; x++) {
+            map.tiles[0][x] = 'wall';
+            map.tiles[this.height - 1][x] = 'wall';
+        }
+        for (let y = 0; y < this.height; y++) {
+            map.tiles[y][0] = 'wall';
+            map.tiles[y][this.width - 1] = 'wall';
+        }
+
+        // Create Houses
+        const houseCount = 6;
+        for (let i = 0; i < houseCount; i++) {
+            const w = 6 + Math.floor(Math.random() * 6);
+            const h = 6 + Math.floor(Math.random() * 6);
+            const x = 5 + Math.floor(Math.random() * (this.width - 10 - w));
+            const y = 5 + Math.floor(Math.random() * (this.height - 10 - h));
+
+            // Check overlap
+            let overlap = false;
+            for (let r of map.rooms) {
+                if (x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y) {
+                    overlap = true;
+                    break;
+                }
+            }
+            if (!overlap) {
+                // Build House Walls
+                for (let hy = y; hy < y + h; hy++) {
+                    for (let hx = x; hx < x + w; hx++) {
+                        if (hy === y || hy === y + h - 1 || hx === x || hx === x + w - 1) {
+                            map.tiles[hy][hx] = 'wall_wood';
+                        } else {
+                            map.tiles[hy][hx] = 'floor';
+                        }
+                    }
+                }
+                // Door
+                let doorX = x + Math.floor(w / 2);
+                let doorY = y + h - 1;
+                if (Math.random() < 0.5) {
+                    doorX = x + w - 1;
+                    doorY = y + Math.floor(h / 2);
+                }
+                map.tiles[doorY][doorX] = 'door_closed';
+
+                map.rooms.push({ x, y, w, h });
+
+                // Furnish Room
+                // Fireplace
+                if (Math.random() < 0.7) {
+                    const fx = x + Math.floor(w / 2);
+                    const fy = y + 1;
+                    if (map.tiles[fy][fx] === 'floor') {
+                        map.props.push({ x: fx, y: fy, type: 'fireplace', char: 'F' });
+                    }
+                }
+
+                // Wardrobe
+                if (Math.random() < 0.6) {
+                    const wx = x + 1;
+                    const wy = y + Math.floor(h / 2);
+                    if (map.tiles[wy][wx] === 'floor') {
+                        map.props.push({ x: wx, y: wy, type: 'wardrobe', char: 'W' });
+                    }
+                }
+
+                // Dresser
+                if (Math.random() < 0.6) {
+                    const dx = x + w - 2;
+                    const dy = y + Math.floor(h / 2);
+                    if (map.tiles[dy][dx] === 'floor') {
+                        map.props.push({ x: dx, y: dy, type: 'dresser', char: 'D' });
+                    }
+                }
+            }
+        }
+
+        // Dungeon Entrance (Stairs)
+        let cx = Math.floor(this.width / 2);
+        let cy = Math.floor(this.height / 2);
+        while (map.tiles[cy][cx] !== 'floor_grass') {
+            cx++;
+        }
+        map.tiles[cy][cx] = 'stairs';
+
+        // Place Well near center
+        map.props.push({ x: cx - 2, y: cy + 2, type: 'well', char: 'O' });
+
+        // Set Start Position (Near the well)
+        map.startX = cx - 4;
+        map.startY = cy + 4;
+        // Ensure start pos is valid
+        if (map.tiles[map.startY][map.startX] !== 'floor_grass') {
+            map.startX = cx;
+            map.startY = cy + 2;
+        }
+
+        // Add Guide NPC
+        map.npcs.push({
+            x: map.startX + 1,
+            y: map.startY,
+            name: "Village Elder",
+            dialogues: [
+                "Welcome, traveler! The time fracture has thrown our world into chaos.",
+                "The Dissonance lurks in the depths of the dungeon.",
+                "You must find the Harmonic Core to restore balance.",
+                "Be careful, the dungeon changes every time you enter.",
+                "Good luck!"
+            ],
+            image: "assets/elder.svg"
+        });
+
+        // Paths
+        // Connect each house to center
+        map.rooms.forEach(room => {
+            const center = this.getCenter(room);
+            let curX = center.x;
+            let curY = center.y;
+            // Move out of house first
+            if (map.tiles[curY + Math.floor(room.h / 2)][curX] === 'door_closed') curY += Math.floor(room.h / 2) + 1;
+
+            // Simple pathfinding to center
+            while (curX !== cx || curY !== cy) {
+                if (curX < cx) curX++;
+                else if (curX > cx) curX--;
+
+                if (curY < cy) curY++;
+                else if (curY > cy) curY--;
+
+                if (map.tiles[curY][curX] === 'floor_grass') {
+                    map.tiles[curY][curX] = 'floor_dirt';
+                }
+            }
+        });
+
+        // Trees
+        for (let y = 1; y < this.height - 1; y++) {
+            for (let x = 1; x < this.width - 1; x++) {
+                if (map.tiles[y][x] === 'floor_grass') {
+                    if (Math.random() < 0.05) {
+                        map.props.push({ x, y, type: 'tree', char: 'T' });
+                    }
+                }
+            }
+        }
+
+        return map;
+    }
+
     generateDungeon(): MapData {
         const map: MapData = {
             width: this.width,
             height: this.height,
             tiles: [],
             rooms: [], // Store rooms for spawning entities later
-            props: []
+            props: [],
+            npcs: []
         };
 
         // Initialize with walls
