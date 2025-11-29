@@ -48,15 +48,14 @@
       <div id="log" class="glass-panel">
         <div class="log-entry">Welcome to the dungeon...</div>
       </div>
-      <div id="inventory" class="glass-panel" style="display: none;">
-        <h3>Inventory</h3>
-        <ul id="inventory-list"></ul>
-        <small>Click to use</small>
+      <div id="spells-panel" class="glass-panel" style="position: absolute; top: 240px; left: 20px; width: 200px;">
+        <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #d500f9;">Grimoire</h3>
+        <ul id="spells-list" style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: #aaa;"></ul>
       </div>
-      <div id="spell-book" class="glass-panel" style="display: none;">
-        <h3>Spell Book</h3>
-        <ul id="spell-list"></ul>
-        <small>Press 1-9 to Cast</small>
+      <div id="inventory-overlay" style="display: none;">
+        <h2>Inventory</h2>
+        <ul id="inventory-list"></ul>
+        <div class="hint">Click to use/equip</div>
       </div>
       <div id="game-over" style="display: none;">
         <h1 style="color: #ff0000; text-shadow: 0 0 10px #ff0000;">GAME OVER</h1>

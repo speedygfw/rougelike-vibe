@@ -125,9 +125,11 @@ export default class MapGenerator {
         }
 
         this.rooms = [];
-        const maxRooms = 10;
+        // Scale maxRooms based on map area (approx 1 room per 150 tiles)
+        const area = this.width * this.height;
+        const maxRooms = Math.floor(area / 150);
         const minRoomSize = 6;
-        const maxRoomSize = 12;
+        const maxRoomSize = 15; // Slightly larger rooms possible
 
         for (let i = 0; i < maxRooms; i++) {
             const w = Math.floor(Math.random() * (maxRoomSize - minRoomSize + 1)) + minRoomSize;
@@ -248,38 +250,56 @@ export default class MapGenerator {
     }
 
     decorateMap(map: MapData) {
-        // Floor Decorations
+        // Furnish Rooms
+        for (const room of map.rooms) {
+            this.furnishRoom(room, map);
+        }
+
+        // Floor Decorations (Corridors/Remaining space)
         for (let y = 0; y < map.height; y++) {
             for (let x = 0; x < map.width; x++) {
-                if (map.tiles[y][x] === 'floor') {
-                    // 5% chance for floor decoration
+                if (map.tiles[y][x] === 'floor' && !map.props.find(p => p.x === x && p.y === y)) {
+                    // 5% chance for random clutter in corridors
                     if (Math.random() < 0.05) {
                         const rand = Math.random();
                         let type = 'rubble';
                         let char = '🪨';
 
-                        if (rand < 0.3) { type = 'bones'; char = '💀'; }
-                        else if (rand < 0.6) { type = 'grass'; char = '🌿'; }
+                        if (rand < 0.2) { type = 'bones'; char = '💀'; }
+                        else if (rand < 0.4) { type = 'grass'; char = '🌿'; }
+                        else if (rand < 0.5) { type = 'web'; char = '🕸️'; } // Web on floor? Maybe better in corners.
 
-                        // Ensure no entity or item is here (simple check, can be improved)
                         map.props.push({ x, y, type, char });
                     }
                 }
             }
         }
 
-        // Wall Decorations (Torches & Banners)
+        // Wall Decorations (Torches & Banners & Webs)
         for (let y = 1; y < map.height - 1; y++) {
             for (let x = 1; x < map.width - 1; x++) {
                 if (map.tiles[y][x] === 'wall') {
-                    // Check if adjacent to floor (south)
-                    // Torches and banners look best on "front facing" walls (north of a floor tile)
-                    if (map.tiles[y + 1][x] === 'floor') {
-                        const rand = Math.random();
-                        if (rand < 0.1) {
-                            map.props.push({ x, y, type: 'torch', char: '🔥' });
-                        } else if (rand < 0.15) {
-                            map.props.push({ x, y, type: 'banner', char: '🚩' });
+                    // Check neighbors for corners (Webs)
+                    let floorNeighbors = 0;
+                    if (map.tiles[y + 1][x] === 'floor') floorNeighbors++;
+                    if (map.tiles[y - 1][x] === 'floor') floorNeighbors++;
+                    if (map.tiles[y][x + 1] === 'floor') floorNeighbors++;
+                    if (map.tiles[y][x - 1] === 'floor') floorNeighbors++;
+
+                    if (floorNeighbors > 0) {
+                        // Torches/Banners on front facing walls
+                        if (map.tiles[y + 1][x] === 'floor') {
+                            const rand = Math.random();
+                            if (rand < 0.1) {
+                                map.props.push({ x, y, type: 'torch', char: '🔥' });
+                            } else if (rand < 0.15) {
+                                map.props.push({ x, y, type: 'banner', char: '🚩' });
+                            }
+                        }
+                        // Webs in corners (walls with > 2 wall neighbors, but exposed to floor)
+                        // Simplified: Random web on wall
+                        if (Math.random() < 0.02) {
+                            map.props.push({ x, y, type: 'web', char: '🕸️' });
                         }
                     }
                 }
@@ -298,6 +318,45 @@ export default class MapGenerator {
                     const rand = Math.random();
                     // 15% chance for cracked wall
                     if (rand < 0.15) map.tiles[y][x] = 'wall_cracked';
+                }
+            }
+        }
+    }
+
+    furnishRoom(room: Room, map: MapData) {
+        const rand = Math.random();
+        const center = this.getCenter(room);
+
+        // Don't block stairs (usually in last room, but safe check)
+        if (map.tiles[center.y][center.x] === 'stairs') return;
+
+        if (rand < 0.4) {
+            // Dining Room
+            // Table in center
+            map.props.push({ x: center.x, y: center.y, type: 'table', char: '🪑' });
+
+            // Chairs around
+            if (map.tiles[center.y - 1][center.x] === 'floor') map.props.push({ x: center.x, y: center.y - 1, type: 'chair', char: '🪑' });
+            if (map.tiles[center.y + 1][center.x] === 'floor') map.props.push({ x: center.x, y: center.y + 1, type: 'chair', char: '🪑' });
+            if (map.tiles[center.y][center.x - 1] === 'floor') map.props.push({ x: center.x - 1, y: center.y, type: 'chair', char: '🪑' });
+            if (map.tiles[center.y][center.x + 1] === 'floor') map.props.push({ x: center.x + 1, y: center.y, type: 'chair', char: '🪑' });
+
+        } else if (rand < 0.7) {
+            // Storage Room
+            // Place crates/barrels along walls
+            for (let y = room.y; y < room.y + room.h; y++) {
+                for (let x = room.x; x < room.x + room.w; x++) {
+                    if (x === room.x || x === room.x + room.w - 1 || y === room.y || y === room.y + room.h - 1) {
+                        // Edge of room (but inside)
+                        if (map.tiles[y][x] === 'floor' && Math.random() < 0.4) {
+                            const type = Math.random() < 0.6 ? 'crate' : 'barrel';
+                            const char = type === 'crate' ? '📦' : '🛢️';
+                            // Check if blocked
+                            if (!map.props.find(p => p.x === x && p.y === y)) {
+                                map.props.push({ x, y, type, char });
+                            }
+                        }
+                    }
                 }
             }
         }

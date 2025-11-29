@@ -1,4 +1,4 @@
-import Renderer from './Renderer.js';
+import ThreeRenderer from './ThreeRenderer.js';
 import MapGenerator, { MapData, Room } from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
@@ -24,7 +24,7 @@ import InputHandler from './InputHandler.js';
 import CombatSystem from './CombatSystem.js';
 
 export default class Game {
-    renderer: Renderer;
+    renderer: ThreeRenderer;
     audio: AudioSystem;
     inputHandler: InputHandler;
     combatSystem: CombatSystem;
@@ -44,12 +44,12 @@ export default class Game {
     fov: FOV | null;
     playerClass: string;
 
-    constructor(canvas: HTMLCanvasElement) {
-        this.renderer = new Renderer(canvas);
+    constructor() {
+        this.renderer = new ThreeRenderer();
         this.audio = new AudioSystem();
         this.inputHandler = new InputHandler();
         this.combatSystem = new CombatSystem(this);
-        this.mapGenerator = new MapGenerator(50, 30);
+        this.mapGenerator = new MapGenerator(100, 80); // Increased map size
         this.createSaveControls();
         this.map = null;
         this.player = null;
@@ -161,6 +161,8 @@ export default class Game {
     init() {
         try {
             console.log("Game.init() called");
+            // Disable controls initially to prevent UI interference
+            if (this.renderer.controls) this.renderer.controls.enabled = false;
 
             // Initialize Audio Context (must be after user interaction)
             document.addEventListener('click', () => {
@@ -248,7 +250,7 @@ export default class Game {
                 };
 
                 btn.addEventListener('touchstart', handlePress, { passive: false });
-                btn.addEventListener('click', (e) => {
+                btn.addEventListener('click', () => {
                     // Fallback for non-touch click (e.g. mouse on desktop testing)
                     this.processCommand(command);
                 });
@@ -271,6 +273,10 @@ export default class Game {
             console.log("Starting game with class:", classType);
             this.playerClass = classType;
             this.generateLevel();
+
+            // Enable controls
+            if (this.renderer.controls) this.renderer.controls.enabled = true;
+
             this.update();
             this.loop();
         } catch (e: any) {
@@ -305,45 +311,54 @@ export default class Game {
 
             if (this.player.level === 20) {
                 // Boss Level
-                const center = this.mapGenerator.getCenter(this.map.rooms[this.map.rooms.length - 1]);
+                const center = this.mapGenerator.getCenter(map.rooms[map.rooms.length - 1]);
                 this.enemies.push(new Enemy(center.x, center.y, 'dragon')); // The Dissonance
 
                 // Place Harmonic Core
-                const amuletPos = this.mapGenerator.getCenter(this.map.rooms[Math.floor(this.map.rooms.length / 2)]);
+                const amuletPos = this.mapGenerator.getCenter(map.rooms[Math.floor(map.rooms.length / 2)]);
                 this.items.push(new HarmonicCore(amuletPos.x, amuletPos.y));
 
                 this.log('You feel a distortion in time... The Dissonance awaits!', 'important');
             } else {
-                for (let i = 1; i < this.map.rooms.length; i++) {
-                    const room = this.map.rooms[i];
-                    const center = this.mapGenerator.getCenter(room);
+                for (let i = 1; i < map.rooms.length; i++) {
+                    const room = map.rooms[i];
 
-                    // Chance to spawn enemy
-                    if (Math.random() < 0.7) {
-                        const roll = Math.random();
-                        let type = 'goblin';
 
-                        // Weighted spawn pool
-                        if (roll < 0.10) type = 'rat';
-                        else if (roll < 0.20) type = 'bat';
-                        else if (roll < 0.30) type = 'spider';
-                        else if (roll < 0.45) type = 'kobold';
-                        else if (roll < 0.60) type = 'goblin';
-                        else if (roll < 0.70) type = 'skeleton';
-                        else if (roll < 0.80) type = 'zombie';
-                        else if (roll < 0.88) type = 'orc';
-                        else if (roll < 0.94) type = 'shaman';
-                        else if (roll < 0.98) type = 'ghost';
-                        else type = 'ogre';
+                    // Spawn 1-3 enemies per room
+                    const enemyCount = Math.floor(Math.random() * 3) + 1;
+                    for (let j = 0; j < enemyCount; j++) {
+                        if (Math.random() < 0.9) {
+                            const roll = Math.random();
+                            let type = 'goblin';
 
-                        this.enemies.push(new Enemy(center.x, center.y, type));
+                            // Weighted spawn pool - More variety
+                            if (roll < 0.15) type = 'rat';
+                            else if (roll < 0.25) type = 'bat';
+                            else if (roll < 0.35) type = 'spider';
+                            else if (roll < 0.50) type = 'kobold';
+                            else if (roll < 0.65) type = 'goblin';
+                            else if (roll < 0.75) type = 'skeleton';
+                            else if (roll < 0.82) type = 'zombie';
+                            else if (roll < 0.88) type = 'orc';
+                            else if (roll < 0.94) type = 'shaman';
+                            else if (roll < 0.98) type = 'ghost';
+                            else type = 'ogre';
+
+                            // Random position in room
+                            const ex = Math.floor(Math.random() * room.w) + room.x;
+                            const ey = Math.floor(Math.random() * room.h) + room.y;
+
+                            if (map.tiles[ey][ex] === 'floor') {
+                                this.enemies.push(new Enemy(ex, ey, type));
+                            }
+                        }
                     }
 
                     // Chance to spawn item
                     if (Math.random() < 0.6) {
                         const ix = Math.floor(Math.random() * room.w) + room.x;
                         const iy = Math.floor(Math.random() * room.h) + room.y;
-                        if (this.map.tiles[iy][ix] === 'floor') {
+                        if (map.tiles[iy][ix] === 'floor') {
                             const roll = Math.random();
                             if (roll < 0.4) {
                                 this.items.push(new Potion(ix, iy));
@@ -364,7 +379,7 @@ export default class Game {
                     if (Math.random() < 0.4) {
                         const kx = Math.floor(Math.random() * room.w) + room.x;
                         const ky = Math.floor(Math.random() * room.h) + room.y;
-                        if (this.map.tiles[ky][kx] === 'floor') {
+                        if (map.tiles[ky][kx] === 'floor') {
                             this.items.push(new Key(kx, ky));
                         }
                     }
@@ -373,7 +388,7 @@ export default class Game {
                     if (Math.random() < 0.5) {
                         const nx = Math.floor(Math.random() * room.w) + room.x;
                         const ny = Math.floor(Math.random() * room.h) + room.y;
-                        if (this.map.tiles[ny][nx] === 'floor') {
+                        if (map.tiles[ny][nx] === 'floor') {
                             const names = ["Old Man", "Lost Adventurer", "Mysterious Merchant", "Ghostly Guide"];
                             const dialogues = [
                                 "The time fracture is growing...",
@@ -397,8 +412,8 @@ export default class Game {
                     }
                 };
 
-                for (let i = 0; i < this.map.rooms.length; i++) {
-                    const room = this.map.rooms[i];
+                for (let i = 0; i < map.rooms.length; i++) {
+                    const room = map.rooms[i];
                     let hasDoor = false;
 
                     // Check Top/Bottom
@@ -446,8 +461,9 @@ export default class Game {
             this.items = [];
             this.npcs = [];
 
-            // Spawn Enemies
-            for (let i = 0; i < 6; i++) {
+            // Spawn Enemies (Cave)
+            const totalEnemies = 15 + Math.floor(Math.random() * 6); // 15-20 enemies
+            for (let i = 0; i < totalEnemies; i++) {
                 let ex, ey;
                 do {
                     ex = Math.floor(Math.random() * this.map.width);
@@ -457,13 +473,13 @@ export default class Game {
                 const roll = Math.random();
                 let type = 'goblin';
 
-                if (roll < 0.10) type = 'rat';
-                else if (roll < 0.20) type = 'bat';
-                else if (roll < 0.30) type = 'spider';
-                else if (roll < 0.45) type = 'kobold';
-                else if (roll < 0.60) type = 'goblin';
-                else if (roll < 0.70) type = 'skeleton';
-                else if (roll < 0.80) type = 'zombie';
+                if (roll < 0.15) type = 'rat';
+                else if (roll < 0.25) type = 'bat';
+                else if (roll < 0.35) type = 'spider';
+                else if (roll < 0.50) type = 'kobold';
+                else if (roll < 0.65) type = 'goblin';
+                else if (roll < 0.75) type = 'skeleton';
+                else if (roll < 0.82) type = 'zombie';
                 else if (roll < 0.88) type = 'orc';
                 else if (roll < 0.94) type = 'shaman';
                 else if (roll < 0.98) type = 'ghost';
@@ -497,14 +513,37 @@ export default class Game {
             }
         }
 
+        this.renderer.initMap(this.map);
         this.updateFOV();
         this.log(`Entered Level ${this.player.level}`, 'important');
 
-        // Update Music based on Level
-        if (this.player.level === 20) {
+        // Update Music based on Level and Combat State
+        this.updateMusic();
+    }
+
+    updateMusic() {
+        if (!this.player || !this.map) return;
+
+        // Check for nearby enemies (Combat State)
+        let inCombat = false;
+        if (this.player.level !== 20) { // Boss has its own theme
+            for (const enemy of this.enemies) {
+                const dx = enemy.x - this.player.x;
+                const dy = enemy.y - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 6 && enemy.hp > 0) { // Combat range
+                    inCombat = true;
+                    break;
+                }
+            }
+        }
+
+        if (this.player!.level === 20) {
             this.audio.playTheme('boss');
+        } else if (inCombat) {
+            this.audio.playCombatTheme();
         } else {
-            this.audio.playProceduralTheme(this.player.level);
+            this.audio.playProceduralTheme(this.player!.level);
         }
     }
 
@@ -524,9 +563,27 @@ export default class Game {
             return;
         }
 
-        const command = this.inputHandler.handleKey(e);
-        if (command) {
-            this.processCommand(command);
+        if (!this.isPlayerTurn) return;
+
+        const cmd = this.inputHandler.handleKey(e);
+        if (cmd) {
+            if (cmd.type === 'move') {
+                // Adjust for camera rotation
+                const rotation = this.renderer.getViewRotation(); // 0, 1, 2, 3
+                let dx = cmd.dx as number;
+                let dy = cmd.dy as number;
+
+                // Rotate vector (dx, dy) by 90 degrees * rotation
+                for (let i = 0; i < rotation; i++) {
+                    const temp = dx;
+                    dx = dy;
+                    dy = -temp;
+                }
+
+                this.processCommand({ ...cmd, dx, dy });
+            } else {
+                this.processCommand(cmd);
+            }
         }
     }
 
@@ -541,9 +598,10 @@ export default class Game {
             const enemy = this.enemies.find(e => e.x === targetX && e.y === targetY);
             if (enemy) {
                 this.attackEnemy(enemy);
+                this.renderer.playAnimation(this.player, 'attack'); // Trigger animation
                 this.isPlayerTurn = false;
                 this.update();
-                setTimeout(() => this.enemyTurn(), 100);
+                setTimeout(() => this.enemyTurn(), 250); // Increased delay for animation
             } else {
                 // Check for NPC
                 const npc = this.npcs.find(n => n.x === targetX && n.y === targetY);
@@ -607,35 +665,6 @@ export default class Game {
         }
     }
 
-    toggleSpellBook() {
-        const bookEl = document.getElementById('spell-book');
-        if (bookEl) {
-            if (bookEl.style.display === 'none' || !bookEl.style.display) {
-                bookEl.style.display = 'block';
-                this.renderSpellBook();
-            } else {
-                bookEl.style.display = 'none';
-            }
-        }
-    }
-
-    renderSpellBook() {
-        if (!this.player) return;
-        const list = document.getElementById('spell-list');
-        if (!list) return;
-        list.innerHTML = '';
-        if (this.player.spells.length === 0) {
-            list.innerHTML = '<li>No Spells Learned</li>';
-            return;
-        }
-
-        this.player.spells.forEach((spell, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${index + 1}. ${spell.name}</span> <span style="color: #00b0ff;">${spell.cost} MP</span>`;
-            list.appendChild(li);
-        });
-    }
-
     castSpell(index: number) {
         if (!this.player || !this.map) return;
         const spell = this.player.spells[index];
@@ -688,6 +717,7 @@ export default class Game {
                 target.hp -= spell.damage;
                 this.log(`You cast ${spell.name} at ${target.char} for ${spell.damage} dmg!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
+                this.renderer.playAnimation(target, 'hit');
                 this.audio.playSound('magic');
                 if (target.hp <= 0) targets.push(target); // Mark for cleanup
                 cast = true;
@@ -718,6 +748,7 @@ export default class Game {
                     currentTarget.hp -= damage;
                     this.log(`Lightning hits ${currentTarget.type} for ${damage} dmg!`, 'magic');
                     this.renderer.triggerEffect(currentTarget.x, currentTarget.y, 'hit');
+                    this.renderer.playAnimation(currentTarget, 'hit');
                     hitEnemies.add(currentTarget);
                     if (currentTarget.hp <= 0) targets.push(currentTarget);
 
@@ -751,6 +782,7 @@ export default class Game {
                 this.player.hp = Math.min(this.player.hp + heal, this.player.maxHp);
                 this.log(`Drained ${spell.damage} HP from ${target.type}, healed ${heal}!`, 'magic');
                 this.renderer.triggerEffect(target.x, target.y, 'hit');
+                this.renderer.playAnimation(target, 'hit');
                 if (target.hp <= 0) targets.push(target);
                 this.audio.playSound('magic');
                 cast = true;
@@ -792,6 +824,7 @@ export default class Game {
                 if (this.enemies.includes(t) && this.player) { // Check if still in list (duplicates from chain lightning)
                     this.log(`${t.type} is destroyed! +${t.xpValue || 10} XP`, 'success');
                     this.player.gainXp(t.xpValue || 10);
+                    this.renderer.removeEntity(t); // Remove mesh
                 }
             });
             this.enemies = this.enemies.filter(e => e.hp > 0);
@@ -822,6 +855,7 @@ export default class Game {
             const item = this.items[itemIndex];
             this.player.inventory.push(item);
             this.items.splice(itemIndex, 1);
+            this.renderer.removeEntity(item); // Remove mesh
             this.log(`Picked up ${item.name}`, 'pickup');
             this.audio.playSound('pickup');
             this.updateUI();
@@ -831,7 +865,7 @@ export default class Game {
     }
 
     toggleInventory() {
-        const invEl = document.getElementById('inventory');
+        const invEl = document.getElementById('inventory-overlay');
         if (invEl) {
             if (invEl.style.display === 'none' || !invEl.style.display) {
                 invEl.style.display = 'block';
@@ -847,6 +881,7 @@ export default class Game {
         const list = document.getElementById('inventory-list');
         if (!list) return;
         list.innerHTML = '';
+
         if (this.player.inventory.length === 0) {
             list.innerHTML = '<li>Empty</li>';
             return;
@@ -854,8 +889,19 @@ export default class Game {
 
         this.player.inventory.forEach((item, index) => {
             const li = document.createElement('li');
-            li.innerText = `${index + 1}. ${item.name}`;
-            li.onclick = () => this.useItem(index);
+            let text = `${item.name}`;
+            if (item instanceof Weapon) text += ` (Dmg: ${item.bonus})`;
+            if (item instanceof Armor) text += ` (Def: ${item.bonus})`;
+
+            // Check if equipped
+            if (this.player!.equipment.weapon === item) text += ' [Equipped]';
+            if (this.player!.equipment.armor === item) text += ' [Equipped]';
+
+            li.textContent = text;
+            li.onclick = () => {
+                this.useItem(index);
+                // Re-render handled in useItem
+            };
             list.appendChild(li);
         });
     }
@@ -880,15 +926,30 @@ export default class Game {
 
             if (used) {
                 this.log(`Used/Equipped ${item.name}`, 'action');
-                this.player.inventory.splice(index, 1);
+                // Only remove if it's NOT equipment (Equipment.use returns true but stays in inventory usually, logic depends on Equipment.ts)
+                // Wait, Equipment.use calls player.equip which returns true.
+                // We shouldn't remove equipment from inventory when equipping.
+                // But Potion.use returns true and should be removed.
+
+                if (!(item instanceof Weapon) && !(item instanceof Armor)) {
+                    this.player.inventory.splice(index, 1);
+                }
+
                 this.renderInventory();
                 this.updateUI();
                 this.isPlayerTurn = false;
                 setTimeout(() => this.enemyTurn(), 100);
+                this.audio.playSound('pickup');
             } else {
                 this.log(`Cannot use ${item.name} right now.`, 'warning');
             }
         }
+    }
+
+    toggleSpellBook() {
+        // Placeholder for spellbook UI if needed, or just use updateUI list
+        // For now, spells are always visible in UI sidebar
+        this.log("Spells are listed in the sidebar.", 'info');
     }
 
     checkStairs() {
@@ -978,6 +1039,7 @@ export default class Game {
                         if (this.visibleTiles.has(`${enemyTarget.x},${enemyTarget.y}`)) {
                             this.log(`${enemyTarget.char} is killed by ${enemy.char}!`, 'success');
                         }
+                        this.renderer.removeEntity(enemyTarget); // Remove mesh
                         this.enemies = this.enemies.filter(e => e !== enemyTarget);
                     }
                 }
@@ -1007,6 +1069,7 @@ export default class Game {
                 this.log(`${enemy.char} dies! +10 XP`, 'success');
                 this.player.gainXp(10);
                 // Remove enemy
+                this.renderer.removeEntity(enemy); // Remove mesh
                 this.enemies = this.enemies.filter(e => e !== enemy);
             }
         } else {
@@ -1017,7 +1080,7 @@ export default class Game {
 
     update() {
         if (this.player && this.map) {
-            this.renderer.updateCamera(this.player, this.map);
+            // this.renderer.updateCamera(this.player, this.map); // Handled by ThreeRenderer.render
             this.visibleTiles = this.fov.compute(this.player.x, this.player.y, 8);
 
             // Update explored tiles
@@ -1028,6 +1091,9 @@ export default class Game {
 
         this.draw();
         this.updateUI();
+
+        // Check music state occasionally (every 30 frames or so would be better, but per update is fine for now as playTheme checks currentTheme)
+        this.updateMusic();
 
         if (this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
             this.gameState = 'GAMEOVER';
@@ -1073,21 +1139,47 @@ export default class Game {
 
     draw() {
         this.renderer.clear();
-        if (this.map) {
-            this.renderer.drawMap(this.map, this.visibleTiles, this.exploredTiles);
-        }
 
-        this.items.forEach(item => this.renderer.drawEntity(item, this.visibleTiles));
-        this.enemies.forEach(enemy => {
-            if (enemy.hp > 0) this.renderer.drawEntity(enemy, this.visibleTiles);
+        // Render 3D Scene
+        this.renderer.render(this);
+
+        this.items.forEach(item => {
+            if (this.visibleTiles.has(`${item.x},${item.y}`)) {
+                this.renderer.drawEntity(item);
+            } else {
+                this.renderer.hideEntity(item);
+            }
         });
-        this.npcs.forEach(npc => this.renderer.drawEntity(npc, this.visibleTiles));
+
+        this.enemies.forEach(enemy => {
+            if (enemy.hp > 0) {
+                if (this.visibleTiles.has(`${enemy.x},${enemy.y}`)) {
+                    this.renderer.drawEntity(enemy);
+                } else {
+                    this.renderer.hideEntity(enemy);
+                }
+            }
+        });
+
+        this.npcs.forEach(npc => {
+            if (this.visibleTiles.has(`${npc.x},${npc.y}`)) {
+                this.renderer.drawEntity(npc);
+            } else {
+                this.renderer.hideEntity(npc);
+            }
+        });
 
         if (this.player) {
-            this.renderer.drawEntity(this.player, this.visibleTiles);
+            this.renderer.drawEntity(this.player);
+
+            // Draw Lighting Overlay (Handled by Three.js lights now)
+            if (this.map) {
+                this.renderer.drawLighting(this.player!, this.map);
+            }
+
             // Draw Minimap
             if (this.map) {
-                this.renderer.drawMinimap(this.map, this.player, this.exploredTiles);
+                this.renderer.drawMinimap(this.map, this.player!, this.exploredTiles);
             }
         }
 

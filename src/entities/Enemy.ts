@@ -5,6 +5,7 @@ import { MapData } from '../engine/MapGenerator.js';
 export default class Enemy extends Entity {
     type: string;
     hp: number;
+    maxHp: number;
     faction: string;
     frozen: number;
     xpValue?: number;
@@ -75,6 +76,7 @@ export default class Enemy extends Entity {
         super(x, y, char, color);
         this.type = type;
         this.hp = hp;
+        this.maxHp = hp;
         this.faction = faction;
         this.frozen = 0;
     }

@@ -37,8 +37,11 @@ export default class Player extends Entity {
     spells: Spell[];
     buffs: Buff[];
 
+    type: string;
+
     constructor(x: number, y: number, classType: string = 'warrior') {
         super(x, y, '🧙‍♂️', '#fff');
+        this.type = 'player';
         this.classType = classType;
         this.hp = 100;
         this.maxHp = 100;

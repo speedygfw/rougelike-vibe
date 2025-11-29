@@ -12,9 +12,9 @@ window.addEventListener('unhandledrejection', function (event) {
 
 window.addEventListener('DOMContentLoaded', () => {
     try {
-        const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
-        if (!canvas) throw new Error("Canvas not found");
-        const game = new Game(canvas);
+        // const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+        // if (!canvas) throw new Error("Canvas not found");
+        const game = new Game();
         game.init();
     } catch (e: any) {
         alert("Init Error: " + e.message);

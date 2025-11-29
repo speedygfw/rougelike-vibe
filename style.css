@@ -12,6 +12,63 @@
   font-weight: 600;
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass through to canvas */
+}
+
+.glass-panel {
+  background: rgba(20, 20, 25, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: auto; /* Re-enable clicks for UI elements */
+}
+
+#stats {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .label {
   color: var(--text-muted);
   font-size: 14px;
@@ -24,47 +81,244 @@
   text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
 }
 
+#mana-val {
+  color: #00b0ff;
+  text-shadow: 0 0 8px rgba(0, 176, 255, 0.4);
+}
+
 #lvl-val {
   color: var(--accent-color);
+}
+
+#controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+#controls h3 {
+  margin: 0 0 10px 0;
+  color: var(--text-main);
+}
+
+#controls p {
+  margin: 4px 0;
+  display: flex;
+  justify-content: space-between;
+  width: 200px;
+}
+
+#controls span {
+  color: var(--accent-color);
+}
+
+#log {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  height: 150px;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.log-entry {
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.log-entry.danger { color: var(--danger-color); }
+.log-entry.success { color: var(--success-color); }
+.log-entry.warning { color: var(--warning-color); }
+.log-entry.magic { color: #d500f9; }
+.log-entry.combat { color: #ff9100; }
+.log-entry.pickup { color: #00e5ff; }
+.log-entry.important { color: #ffd700; font-weight: bold; }
+
+#inventory-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-height: 500px;
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid var(--accent-color);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+  pointer-events: auto;
+  z-index: 200;
+}
+
+#inventory-overlay h2 {
+  margin-top: 0;
+  color: var(--accent-color);
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 16px;
+}
+
+#inventory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+#inventory-list li {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: space-between;
+}
+
+#inventory-list li:hover {
+  background: rgba(124, 77, 255, 0.1);
+  color: var(--accent-color);
+}
+
+.hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 16px;
+}
+
+#minimap {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  width: 150px;
+  height: 150px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile Controls */
+#mobile-controls {
+  display: none;
+  position: absolute;
   bottom: 20px;
   left: 0;
   width: 100%;
-  height: 180px;
-  pointer-events: none;
-  /* Let clicks pass through container */
-  z-index: 1000;
+  justify-content: space-between;
   padding: 0 20px;
   box-sizing: border-box;
+  pointer-events: none;
+}
+
+#dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+}
+
+.dpad-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+#action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  backdrop-filter: blur(4px);
+}
+
+button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#dpad button {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#action-buttons button {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  border-radius: 50%;
 }
 
 @media (max-width: 768px) {
   #mobile-controls {
     display: flex;
   }
-
   #controls {
     display: none;
-    /* Hide keyboard instructions on mobile */
   }
-
   #log {
+    bottom: 180px; /* Move up to avoid mobile controls */
     height: 100px;
-    /* Smaller log on mobile */
-    font-size: 12px;
+    width: 200px;
+    right: 10px;
+  }
+  #stats {
+    width: 150px;
+    font-size: 14px;
   }
 }
 
-#minimap {
+#game-over, #victory-screen {
   position: absolute;
-  top: 80px;
-  right: 24px;
-  z-index: 100;
-  pointer-events: none;
-  width: 150px !important;
-  height: 150px !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 300;
+  pointer-events: auto;
+  text-align: center;
 }
 
-canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+.class-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  width: 200px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.class-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-color);
 }
