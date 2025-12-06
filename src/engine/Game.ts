@@ -686,24 +686,32 @@ export default class Game {
     }
 
     processCommand(command: any) {
-        if (!this.isPlayerTurn || !this.player || !this.map) return;
+        console.log('DEBUG: processCommand called', command);
+        if (!this.isPlayerTurn || !this.player || !this.map) {
+            console.log('DEBUG: processCommand early return', this.isPlayerTurn, !!this.player, !!this.map);
+            return;
+        }
 
         if (command.type === 'move') {
             const targetX = this.player.x + command.dx;
             const targetY = this.player.y + command.dy;
+            console.log('DEBUG: Target pos', targetX, targetY);
 
             // Check for enemy
             const enemy = this.enemies.find(e => e.x === targetX && e.y === targetY);
             if (enemy) {
+                console.log('DEBUG: Enemy found');
                 this.attackEnemy(enemy);
                 this.renderer.playAnimation(this.player, 'attack'); // Trigger animation
                 this.isPlayerTurn = false;
                 this.update();
                 setTimeout(() => this.enemyTurn(), 250); // Increased delay for animation
             } else {
+                console.log('DEBUG: No enemy found, checking NPC/Door/Move');
                 // Check for NPC
                 const npc = this.npcs.find(n => n.x === targetX && n.y === targetY);
                 if (npc) {
+                    console.log('DEBUG: NPC found');
                     const interaction = npc.interact();
                     this.ui.showDialogue(npc.name, interaction.text, interaction.image);
                     // this.ui.log(`${npc.name}: "${message}"`, 'info');
@@ -712,7 +720,9 @@ export default class Game {
                 }
 
                 const tile = this.map.tiles[targetY][targetX];
+                console.log('DEBUG: Checking tile type:', tile);
                 if (tile === 'door_closed') {
+                    console.log('DEBUG: Door found');
                     const keyIndex = this.player.inventory.findIndex(i => i.name === 'Golden Key');
                     if (keyIndex !== -1) {
                         this.ui.log("You unlock the door with your key.", 'success');

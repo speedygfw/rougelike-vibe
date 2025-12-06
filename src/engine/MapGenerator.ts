@@ -1,3 +1,4 @@
+import { getRandomTheme } from './Theme.js';
 
 export interface MapData {
     width: number;
@@ -51,6 +52,7 @@ export default class MapGenerator {
         } else {
             map = this.generateCaves();
         }
+        map.theme = getRandomTheme();
         this.decorateMap(map);
         return map;
     }

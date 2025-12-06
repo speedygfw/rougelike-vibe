@@ -19,19 +19,19 @@ export class UIManager {
     updateUI(player: any) {
         if (!player) return;
         const hpEl = document.getElementById('hp');
-        if (hpEl) hpEl.innerText = `HP: ${player.hp}/${player.maxHp}`;
+        if (hpEl) hpEl.textContent = `HP: ${player.hp}/${player.maxHp}`;
 
         const levelEl = document.getElementById('level');
-        if (levelEl) levelEl.innerText = `Level: ${player.level}`;
+        if (levelEl) levelEl.textContent = `Level: ${player.level}`;
 
         const xpEl = document.getElementById('xp');
-        if (xpEl) xpEl.innerText = `XP: ${player.xp}/${player.nextLevelXp}`;
+        if (xpEl) xpEl.textContent = `XP: ${player.xp}/${player.nextLevelXp}`;
 
         const dungeonLevelEl = document.getElementById('dungeon-level');
-        if (dungeonLevelEl) dungeonLevelEl.innerText = `Dungeon Level: ${player.level}`;
+        if (dungeonLevelEl) dungeonLevelEl.textContent = `Dungeon Level: ${player.level}`;
 
         const manaEl = document.getElementById('mana');
-        if (manaEl) manaEl.innerText = `Mana: ${player.mana}/${player.maxMana}`;
+        if (manaEl) manaEl.textContent = `Mana: ${player.mana}/${player.maxMana}`;
     }
 
     toggleInventory(player: any) {

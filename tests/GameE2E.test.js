@@ -5,6 +5,30 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Game from '../src/engine/Game.js';
 import Player from '../src/entities/Player.js';
 
+vi.mock('../src/engine/ThreeRenderer.js', () => {
+    return {
+        default: class {
+            constructor() {
+                this.domElement = { style: {} };
+            }
+            initMap() { }
+            render() { }
+            drawEntity() { }
+            hideEntity() { }
+            removeEntity() { }
+            updateLights() { }
+            triggerEffect() { }
+            createFloatingText() { }
+            drawEffects() { }
+            drawMinimap() { }
+            updateVisibility() { }
+            playAnimation() { }
+            clear() { }
+            getViewRotation() { return 0; }
+        }
+    };
+});
+
 // Mock Canvas and Context
 const mockContext = {
     fillStyle: '',
@@ -55,7 +79,7 @@ describe('Game E2E Flow', () => {
         document.body.appendChild(container);
 
         // Mock UI elements
-        const uiIds = ['hp-val', 'mana-val', 'lvl-val', 'atk-val', 'def-val', 'weapon-val', 'armor-val', 'log', 'inventory', 'inventory-list', 'class-selection', 'game-over', 'victory-screen'];
+        const uiIds = ['hp', 'mana', 'lvl-val', 'atk-val', 'def-val', 'weapon-val', 'armor-val', 'log', 'inventory', 'inventory-list', 'class-selection', 'game-over', 'victory-screen'];
         uiIds.forEach(id => {
             const el = document.createElement('div');
             el.id = id;
@@ -69,11 +93,13 @@ describe('Game E2E Flow', () => {
         document.body.appendChild(card);
 
         game = new Game(mockCanvas);
+        vi.useFakeTimers();
     });
 
     afterEach(() => {
         document.body.innerHTML = '';
         vi.clearAllMocks();
+        vi.useRealTimers();
     });
 
     it('should initialize game and start with a class', () => {
@@ -93,27 +119,34 @@ describe('Game E2E Flow', () => {
 
         // Mock map to be empty floor around player
         game.map.tiles[startY][startX + 1] = 'floor';
+        console.log('DEBUG: Player start:', startX, startY);
+        console.log('DEBUG: Target tile:', game.map.tiles[startY][startX + 1]);
+        console.log('DEBUG: Map width:', game.map.width);
 
-        const moveEvent = new KeyboardEvent('keydown', { key: 'ArrowRight' });
-        game.handleInput(moveEvent);
+        // Ensure no NPC is blocking the path
+        game.npcs = game.npcs.filter(npc => npc.x !== startX + 1 || npc.y !== startY);
+
+        expect(game.isPlayerTurn).toBe(true);
+        expect(game.map.tiles[startY][startX + 1]).toBe('floor'); // Double check tile
+
+        const moveCommand = { type: 'move', dx: 1, dy: 0 };
+        game.processCommand(moveCommand);
+
+        vi.advanceTimersByTime(500);
 
         // Check if player moved
-        if (game.player.x === startX + 1) {
-            expect(game.player.x).toBe(startX + 1);
-        } else {
-            expect(game.player.x).toBe(startX);
-        }
+        expect(game.player.x).toBe(startX + 1);
     });
 
     it('should update UI stats', () => {
         game.startGame('mage');
-        game.updateUI();
+        game.ui.updateUI(game.player);
 
-        const hpVal = document.getElementById('hp-val');
-        const manaVal = document.getElementById('mana-val');
+        const hpVal = document.getElementById('hp');
+        const manaVal = document.getElementById('mana');
 
-        expect(hpVal.innerText).toContain('/');
-        expect(manaVal.innerText).toBe('50/50');
+        expect(hpVal.innerHTML).toContain('/');
+        expect(manaVal.innerHTML).toBe('Mana: 50/50');
     });
 
     it('should handle combat flow (attack and kill enemy)', () => {
@@ -140,18 +173,17 @@ describe('Game E2E Flow', () => {
         Math.random = () => 0.1;
 
         // Player attacks enemy by moving into it
-        const moveEvent = new KeyboardEvent('keydown', { key: 'ArrowRight' });
-        game.handleInput(moveEvent);
+        const moveCommand = { type: 'move', dx: 1, dy: 0 };
+        game.processCommand(moveCommand);
 
         // Restore Math.random
         Math.random = originalRandom;
 
-        expect(enemy.hp).toBeLessThan(10);
+        expect(enemy.hp).toBe(5);
         expect(game.player.x).toBe(startX); // Player shouldn't move into enemy
     });
 
     it('should handle item pickup', () => {
-        vi.useFakeTimers();
         game.startGame('warrior');
         const startX = game.player.x;
         const startY = game.player.y;
@@ -169,18 +201,22 @@ describe('Game E2E Flow', () => {
         game.items.push(item);
         game.map.tiles[startY][startX + 1] = 'floor';
 
+        // Ensure no NPC is blocking the path
+        game.npcs = game.npcs.filter(npc => npc.x !== startX + 1 || npc.y !== startY);
+
         // Move player to item
-        const moveEvent = new KeyboardEvent('keydown', { key: 'ArrowRight' });
-        game.handleInput(moveEvent);
+        expect(game.isPlayerTurn).toBe(true);
+        const moveCommand = { type: 'move', dx: 1, dy: 0 };
+        game.processCommand(moveCommand);
 
         // Fast-forward time to allow enemy turn to complete and player turn to restore
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(500);
 
         expect(game.player.x).toBe(startX + 1);
 
         // Now pick up
-        const pickupEvent = new KeyboardEvent('keydown', { key: 'g' });
-        game.handleInput(pickupEvent);
+        const pickupCommand = { type: 'pickup' };
+        game.processCommand(pickupCommand);
 
         expect(game.items.length).toBe(0); // Item should be removed
         expect(game.player.inventory.length).toBe(1);

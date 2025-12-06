@@ -29,9 +29,11 @@ export default class Entity {
         else if (dx > 0) this.facing = 3;
 
         if (newX >= 0 && newX < map.width && newY >= 0 && newY < map.height) {
+            console.log('DEBUG: Tile at new pos:', map.tiles[newY][newX]);
             if (map.tiles[newY][newX] !== 'wall') {
                 this.x = newX;
                 this.y = newY;
+                console.log('DEBUG: Entity moved to', this.x, this.y);
                 return true;
             }
         }

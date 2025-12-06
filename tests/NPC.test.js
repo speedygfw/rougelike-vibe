@@ -15,7 +15,7 @@ describe('NPC', () => {
     it('should return dialogue on interact', () => {
         const npc = new NPC(5, 5, 'Guide', ['Welcome', 'Beware']);
         const line = npc.interact();
-        expect(['Welcome', 'Beware']).toContain(line);
+        expect(['Welcome', 'Beware']).toContain(line.text);
     });
 
     it('should have default dialogue if none provided', () => {

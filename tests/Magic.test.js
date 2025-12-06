@@ -3,6 +3,29 @@ import Game from '../src/engine/Game.js';
 import Player from '../src/entities/Player.js';
 import Enemy from '../src/entities/Enemy.js';
 
+vi.mock('../src/engine/ThreeRenderer.js', () => {
+    return {
+        default: class {
+            constructor() {
+                this.domElement = { style: {} };
+            }
+            initMap() { }
+            render() { }
+            drawEntity() { }
+            hideEntity() { }
+            removeEntity() { }
+            updateLights() { }
+            triggerEffect() { }
+            createFloatingText() { }
+            drawEffects() { }
+            drawMinimap() { }
+            updateVisibility() { }
+            playAnimation() { }
+            clear() { }
+        }
+    };
+});
+
 // Mock canvas and document
 const canvasMock = {
     getContext: () => ({
@@ -21,8 +44,37 @@ const canvasMock = {
 };
 
 global.document = {
-    getElementById: vi.fn(() => ({ style: {} })),
-    createElement: vi.fn(() => ({ style: {}, appendChild: vi.fn() })),
+    getElementById: vi.fn((id) => {
+        if (id === 'minimap') return null;
+        return { style: {} };
+    }),
+    createElement: vi.fn((tag) => {
+        if (tag === 'canvas') {
+            return {
+                getContext: () => ({
+                    clearRect: vi.fn(),
+                    fillStyle: '',
+                    fillRect: vi.fn(),
+                    fillText: vi.fn(),
+                    font: '',
+                    drawImage: vi.fn(),
+                    save: vi.fn(),
+                    restore: vi.fn(),
+                    translate: vi.fn(),
+                    strokeRect: vi.fn(),
+                    beginPath: vi.fn(),
+                    moveTo: vi.fn(),
+                    lineTo: vi.fn(),
+                    stroke: vi.fn(),
+                }),
+                width: 800,
+                height: 600,
+                style: {},
+                classList: { add: vi.fn() },
+            };
+        }
+        return { style: {}, appendChild: vi.fn() };
+    }),
     body: { appendChild: vi.fn() },
     querySelectorAll: vi.fn(() => [])
 };
@@ -43,8 +95,11 @@ describe('Magic System', () => {
         game = new Game(canvasMock);
         player = new Player(10, 10, 'mage');
         game.player = player;
+        game.map = { width: 20, height: 20, tiles: [] };
+        game.enemies = [];
+        game.ui = { log: vi.fn(), showDialogue: vi.fn(), toggleInventory: vi.fn(), toggleSpellBook: vi.fn(), updateUI: vi.fn() };
         game.log = vi.fn();
-        game.renderer = { triggerEffect: vi.fn() };
+        game.renderer = { triggerEffect: vi.fn(), playAnimation: vi.fn() };
         game.updateUI = vi.fn();
         game.update = vi.fn();
         game.enemyTurn = vi.fn(); // Mock enemy turn to prevent async issues
@@ -60,7 +115,7 @@ describe('Magic System', () => {
 
         expect(player.hp).toBe(30);
         expect(player.mana).toBe(40);
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('heal'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('heal'), 'magic');
     });
 
     it('should cast Frost Nova (Freeze)', () => {
@@ -73,7 +128,7 @@ describe('Magic System', () => {
         game.castSpell(0);
 
         expect(enemy.frozen).toBe(3);
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('frozen'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('frozen'), 'magic');
     });
 
     it('should cast Chain Lightning', () => {
@@ -90,7 +145,7 @@ describe('Magic System', () => {
 
         expect(enemy1.hp).toBe(30); // 50 - 20
         expect(enemy2.hp).toBeLessThan(50); // Should take bounce damage (20 * 0.7 = 14) -> 36
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('Lightning hits'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('Lightning hits'), 'magic');
     });
 
     it('should cast Drain Life', () => {
@@ -107,7 +162,7 @@ describe('Magic System', () => {
 
         expect(enemy.hp).toBe(10); // 20 - 10
         expect(player.hp).toBe(55); // 50 + (10/2)
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('Drained'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('Drained'), 'magic');
     });
 
     it('should cast Stone Skin (Buff)', () => {
@@ -119,7 +174,7 @@ describe('Magic System', () => {
         expect(player.buffs.length).toBe(1);
         expect(player.buffs[0].type).toBe('buff');
         expect(player.buffs[0].amount).toBe(5);
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('Stone Skin'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('Stone Skin'), 'magic');
     });
 
     it('should cast Shadow Cloak (Invisibility)', () => {
@@ -130,7 +185,7 @@ describe('Magic System', () => {
 
         expect(player.buffs.length).toBe(1);
         expect(player.buffs[0].type).toBe('invisibility');
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('Shadow Cloak'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('Shadow Cloak'), 'magic');
     });
 
     it('should cast Time Warp', () => {
@@ -151,6 +206,6 @@ describe('Magic System', () => {
         // So 0 + 3 = 3. Then 3-- = 2.
 
         expect(game.extraTurns).toBe(2);
-        expect(game.log).toHaveBeenCalledWith(expect.stringContaining('Time warps'), 'magic');
+        expect(game.ui.log).toHaveBeenCalledWith(expect.stringContaining('Time warps'), 'magic');
     });
 });

@@ -3,6 +3,29 @@ import Game from '../src/engine/Game.js';
 import Player from '../src/entities/Player.js';
 import MapGenerator from '../src/engine/MapGenerator.js';
 
+vi.mock('../src/engine/ThreeRenderer.js', () => {
+    return {
+        default: class {
+            constructor() {
+                this.domElement = { style: {} };
+            }
+            initMap() { }
+            render() { }
+            drawEntity() { }
+            hideEntity() { }
+            removeEntity() { }
+            updateLights() { }
+            triggerEffect() { }
+            createFloatingText() { }
+            drawEffects() { }
+            drawMinimap() { }
+            updateVisibility() { }
+            playAnimation() { }
+            clear() { }
+        }
+    };
+});
+
 // Mock canvas and document
 const canvasMock = {
     getContext: () => ({
@@ -26,14 +49,69 @@ global.document = {
         if (id === 'inventory') return { style: { display: 'none' } };
         if (id === 'inventory-list') return { innerHTML: '' };
         if (id === 'log') return { prepend: vi.fn(), children: [], removeChild: vi.fn() };
+        if (id === 'minimap') return null;
         return { innerText: '', onclick: null, style: {} };
     }),
-    createElement: vi.fn(() => ({
-        style: {},
-        classList: { add: vi.fn() },
-        appendChild: vi.fn(),
-        onclick: null
-    })),
+    createElement: vi.fn((tag) => {
+        if (tag === 'canvas') {
+            return {
+                getContext: () => ({
+                    clearRect: vi.fn(),
+                    fillStyle: '',
+                    fillRect: vi.fn(),
+                    fillText: vi.fn(),
+                    font: '',
+                    drawImage: vi.fn(),
+                    save: vi.fn(),
+                    restore: vi.fn(),
+                    translate: vi.fn(),
+                    strokeRect: vi.fn(),
+                    beginPath: vi.fn(),
+                    moveTo: vi.fn(),
+                    lineTo: vi.fn(),
+                    stroke: vi.fn(),
+                }),
+                width: 800,
+                height: 600,
+                style: {},
+                classList: { add: vi.fn() },
+            };
+        }
+        return {
+            style: {},
+            classList: { add: vi.fn() },
+            appendChild: vi.fn(),
+            onclick: null
+        };
+    }),
+    createElementNS: vi.fn((ns, tag) => {
+        if (tag === 'canvas') {
+            return {
+                getContext: () => ({
+                    clearRect: vi.fn(),
+                    fillStyle: '',
+                    fillRect: vi.fn(),
+                    fillText: vi.fn(),
+                    font: '',
+                    drawImage: vi.fn(),
+                    save: vi.fn(),
+                    restore: vi.fn(),
+                    translate: vi.fn(),
+                    strokeRect: vi.fn(),
+                    beginPath: vi.fn(),
+                    moveTo: vi.fn(),
+                    lineTo: vi.fn(),
+                    stroke: vi.fn(),
+                }),
+                width: 800,
+                height: 600,
+                style: {},
+                classList: { add: vi.fn() },
+                addEventListener: vi.fn(),
+            };
+        }
+        return { style: {}, classList: { add: vi.fn() }, appendChild: vi.fn() };
+    }),
     body: {
         appendChild: vi.fn()
     },
@@ -58,7 +136,7 @@ describe('Game Features', () => {
     let game;
 
     beforeEach(() => {
-        game = new Game(canvasMock);
+        game = new Game();
     });
 
     describe('Character Classes', () => {
