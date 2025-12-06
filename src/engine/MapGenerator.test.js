@@ -29,4 +29,16 @@ describe('MapGenerator', () => {
         }
         expect(hasStairs).toBe(true);
     });
+
+    it('should populate village with Elder and villagers', () => {
+        const generator = new MapGenerator(30, 30);
+        const map = generator.generateVillage();
+
+        const elder = map.npcs.find(n => n.name === 'Elder Aethel');
+        expect(elder).toBeDefined();
+        expect(elder?.image).toBe('assets/elder_portrait.png');
+
+        // Should have Elder + some villagers
+        expect(map.npcs.length).toBeGreaterThan(1);
+    });
 });

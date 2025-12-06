@@ -33,6 +33,8 @@ export default class Entity {
             if (map.tiles[newY][newX] !== 'wall') {
                 this.x = newX;
                 this.y = newY;
+                this.drawX = newX;
+                this.drawY = newY;
                 console.log('DEBUG: Entity moved to', this.x, this.y);
                 return true;
             }

@@ -239,7 +239,7 @@ export default class MapGenerator {
         map.npcs.push({
             x: map.startX + 1,
             y: map.startY,
-            name: "Village Elder",
+            name: "Elder Aethel",
             dialogues: [
                 "Welcome, traveler! The time fracture has thrown our world into chaos.",
                 "The Dissonance lurks in the depths of the dungeon.",
@@ -247,8 +247,93 @@ export default class MapGenerator {
                 "Be careful, the dungeon changes every time you enter.",
                 "Good luck!"
             ],
-            image: "assets/elder.svg"
+            image: "assets/elder_portrait.png"
         });
+
+        // Specific Villagers with unique personalities
+        const villagers = [
+            {
+                name: "Barin the Blacksmith",
+                dialogues: [
+                    "Need your blade sharpened?",
+                    "The forge keeps the cold at bay.",
+                    "Steel is the only thing you can trust in these times.",
+                    "I saw a strange shadow near the mines."
+                ],
+                image: "assets/barin_portrait.png"
+            },
+            {
+                name: "Elara",
+                dialogues: [
+                    "The flowers are blooming despite the darkness.",
+                    "Have you seen my cat?",
+                    "It's quiet... too quiet.",
+                    "Be careful out there, traveler."
+                ],
+                image: "assets/elara_portrait.png"
+            },
+            {
+                name: "Healer Mila",
+                dialogues: [
+                    "Stay still, let me look at that wound.",
+                    "I have herbs for most ailments, but not for the Dissonance.",
+                    "Drink this tea, it will help with the chill.",
+                    "Your spirit is strong."
+                ],
+                image: "assets/mila_portrait.png"
+            },
+            {
+                name: "Guard Thorne",
+                dialogues: [
+                    "Move along.",
+                    "I'm watching you.",
+                    "The walls are safe. The outside is not.",
+                    "Report any suspicious activity."
+                ],
+                image: "assets/thorne_portrait.png"
+            },
+            {
+                name: "Farmer Rowan",
+                dialogues: [
+                    "Crops aren't growing like they used to.",
+                    "The soil feels... different.",
+                    "Honest work helps me sleep at night.",
+                    "We need rain, but not the black rain."
+                ],
+                image: "assets/rowan_portrait.png"
+            }
+        ];
+
+        for (const villager of villagers) {
+            let placed = false;
+            let attempts = 0;
+            while (!placed && attempts < 100) {
+                // Try to place near houses or random spots (avoid 0,0)
+                const vx = Math.floor(Math.random() * (map.width - 2)) + 1;
+                const vy = Math.floor(Math.random() * (map.height - 2)) + 1;
+                attempts++;
+
+                // Check distance from player spawn
+                const dist = Math.abs(vx - map.startX) + Math.abs(vy - map.startY);
+                if (dist < 4) continue;
+
+                // Check tile
+                if (map.tiles[vy][vx] === 'floor' || map.tiles[vy][vx] === 'floor_grass') {
+                    // Check for existing entities
+                    const occupied = map.npcs.find(n => n.x === vx && n.y === vy);
+                    if (!occupied) {
+                        map.npcs.push({
+                            x: vx,
+                            y: vy,
+                            name: villager.name,
+                            dialogues: villager.dialogues,
+                            image: villager.image
+                        });
+                        placed = true;
+                    }
+                }
+            }
+        }
 
         // Paths
         // Connect each house to center

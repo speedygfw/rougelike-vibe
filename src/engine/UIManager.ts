@@ -99,100 +99,105 @@ export class UIManager {
         const el = document.getElementById('victory');
         if (el) el.style.display = 'flex';
     }
+    dialogueOverlay: HTMLElement | null = null;
+    dialogueTitle: HTMLElement | null = null;
+    dialogueContent: HTMLElement | null = null;
+    dialoguePortrait: HTMLImageElement | null = null;
+
+    initDialogueDOM() {
+        if (this.dialogueOverlay) return;
+
+        this.dialogueOverlay = document.createElement('div');
+        this.dialogueOverlay.id = 'dialogue-overlay';
+        this.dialogueOverlay.style.position = 'absolute';
+        this.dialogueOverlay.style.top = '0';
+        this.dialogueOverlay.style.left = '0';
+        this.dialogueOverlay.style.width = '100%';
+        this.dialogueOverlay.style.height = '100%';
+        this.dialogueOverlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        this.dialogueOverlay.style.display = 'none'; // Start hidden
+        this.dialogueOverlay.style.justifyContent = 'center';
+        this.dialogueOverlay.style.alignItems = 'flex-end'; // Bottom of screen
+        this.dialogueOverlay.style.zIndex = '1000';
+
+        const box = document.createElement('div');
+        box.id = 'dialogue-box';
+        box.style.width = '80%';
+        box.style.height = '180px';
+        box.style.backgroundColor = '#222';
+        box.style.border = '2px solid #fff';
+        box.style.padding = '20px';
+        box.style.marginBottom = '50px';
+        box.style.color = '#fff';
+        box.style.fontFamily = 'monospace';
+        box.style.fontSize = '18px';
+        box.style.display = 'flex';
+        box.style.flexDirection = 'row';
+        box.style.gap = '20px';
+
+        this.dialoguePortrait = document.createElement('img');
+        this.dialoguePortrait.id = 'dialogue-portrait';
+        this.dialoguePortrait.style.width = '140px';
+        this.dialoguePortrait.style.height = '140px';
+        this.dialoguePortrait.style.objectFit = 'cover';
+        this.dialoguePortrait.style.border = '2px solid #ffd700';
+        this.dialoguePortrait.style.display = 'none';
+        box.appendChild(this.dialoguePortrait);
+
+        const textContainer = document.createElement('div');
+        textContainer.style.display = 'flex';
+        textContainer.style.flexDirection = 'column';
+        textContainer.style.flex = '1';
+
+        this.dialogueTitle = document.createElement('div');
+        this.dialogueTitle.id = 'dialogue-title';
+        this.dialogueTitle.style.fontWeight = 'bold';
+        this.dialogueTitle.style.marginBottom = '10px';
+        this.dialogueTitle.style.color = '#ffd700';
+
+        this.dialogueContent = document.createElement('div');
+        this.dialogueContent.id = 'dialogue-content';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.innerText = 'Close (Space)';
+        closeBtn.style.marginTop = 'auto';
+        closeBtn.style.alignSelf = 'flex-end';
+        closeBtn.onclick = () => { this.hideDialogue(); };
+
+        textContainer.appendChild(this.dialogueTitle);
+        textContainer.appendChild(this.dialogueContent);
+        textContainer.appendChild(closeBtn);
+        box.appendChild(textContainer);
+        this.dialogueOverlay.appendChild(box);
+        document.body.appendChild(this.dialogueOverlay);
+    }
+
     showDialogue(name: string, text: string, image?: string) {
-        let overlay = document.getElementById('dialogue-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'dialogue-overlay';
-            overlay.style.position = 'absolute';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
-            overlay.style.display = 'flex';
-            overlay.style.justifyContent = 'center';
-            overlay.style.alignItems = 'end'; // Bottom of screen
-            overlay.style.zIndex = '1000';
+        if (!this.dialogueOverlay) this.initDialogueDOM();
+        console.log('DEBUG: UIManager.showDialogue', { name, text, image, overlayExists: !!this.dialogueOverlay });
 
-            const box = document.createElement('div');
-            box.id = 'dialogue-box';
-            box.style.width = '80%';
-            box.style.height = '180px'; // Increased height for image
-            box.style.backgroundColor = '#222';
-            box.style.border = '2px solid #fff';
-            box.style.padding = '20px';
-            box.style.marginBottom = '50px';
-            box.style.color = '#fff';
-            box.style.fontFamily = 'monospace';
-            box.style.fontSize = '18px';
-            box.style.display = 'flex';
-            box.style.flexDirection = 'row'; // Row layout for image + text
-            box.style.gap = '20px';
+        if (this.dialogueTitle) this.dialogueTitle.innerText = name;
+        if (this.dialogueContent) this.dialogueContent.innerText = text;
 
-            const portrait = document.createElement('img');
-            portrait.id = 'dialogue-portrait';
-            portrait.style.width = '140px';
-            portrait.style.height = '140px';
-            portrait.style.objectFit = 'cover';
-            portrait.style.border = '2px solid #ffd700';
-            portrait.style.display = 'none'; // Hidden by default
-            box.appendChild(portrait);
-
-            const textContainer = document.createElement('div');
-            textContainer.style.display = 'flex';
-            textContainer.style.flexDirection = 'column';
-            textContainer.style.flex = '1';
-
-            const title = document.createElement('div');
-            title.id = 'dialogue-title';
-            title.style.fontWeight = 'bold';
-            title.style.marginBottom = '10px';
-            title.style.color = '#ffd700';
-
-            const content = document.createElement('div');
-            content.id = 'dialogue-content';
-
-            const closeBtn = document.createElement('button');
-            closeBtn.innerText = 'Close (Space)';
-            closeBtn.style.marginTop = 'auto';
-            closeBtn.style.alignSelf = 'flex-end';
-            closeBtn.onclick = () => { overlay!.style.display = 'none'; };
-
-            textContainer.appendChild(title);
-            textContainer.appendChild(content);
-            textContainer.appendChild(closeBtn);
-            box.appendChild(textContainer);
-            overlay.appendChild(box);
-            document.body.appendChild(overlay);
-        }
-
-        const title = document.getElementById('dialogue-title');
-        const content = document.getElementById('dialogue-content');
-        const portrait = document.getElementById('dialogue-portrait') as HTMLImageElement;
-
-        if (title) title.innerText = name;
-        if (content) content.innerText = text;
-
-        if (portrait) {
+        if (this.dialoguePortrait) {
             if (image) {
-                portrait.src = image;
-                portrait.style.display = 'block';
+                this.dialoguePortrait.src = image;
+                this.dialoguePortrait.style.display = 'block';
             } else {
-                portrait.style.display = 'none';
+                this.dialoguePortrait.style.display = 'none';
             }
         }
 
-        overlay.style.display = 'flex';
+        if (this.dialogueOverlay) this.dialogueOverlay.style.display = 'flex';
     }
 
     hideDialogue() {
-        const overlay = document.getElementById('dialogue-overlay');
-        if (overlay) overlay.style.display = 'none';
+        console.log('DEBUG: UIManager.hideDialogue');
+        if (this.dialogueOverlay) this.dialogueOverlay.style.display = 'none';
     }
 
     isDialogueOpen(): boolean {
-        const overlay = document.getElementById('dialogue-overlay');
-        return overlay ? overlay.style.display !== 'none' : false;
+        // console.log('DEBUG: isDialogueOpen check', this.dialogueOverlay ? this.dialogueOverlay.style.display : 'no overlay');
+        return this.dialogueOverlay ? this.dialogueOverlay.style.display !== 'none' : false;
     }
 }

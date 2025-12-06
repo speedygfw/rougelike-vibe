@@ -39,11 +39,14 @@ But beware... the echoes of the past are not always friendly. You must descend 2
     *   **Rogue**: A stealthy assassin with high critical hit chance.
 *   **Spell Book System**: Learn and cast powerful magic like *Fireball*, *Chain Lightning*, and *Time Warp*. Press **'B'** to manage your spells.
 *   **Dynamic World**:
-    *   **Village Hub**: Start in the peaceful village of Oakhaven, talk to NPCs, and prepare for your journey.
-    *   **NPCs**: Meet friendly characters who offer lore and advice.
+    *   **Village Hub**: Start in the peaceful village of Oakhaven.
+        *   **Meet the Locals**: Talk to **Elder Aethel**, **Barin the Smith**, **Mila the Healer**, and more. Each has unique dialogue and personality.
+        *   **Dynamic Visibility**: Explore the village with Fog of War mechanics, discovering houses and villagers as you roam.
     *   **Factions**: Watch enemies fight each other (e.g., Skeletons vs. Goblins).
     *   **Varied Environments**: Traverse classic brick dungeons and organic cave systems.
-*   **Modern UI**: 
+*   **Enhanced Visuals**: 
+    *   **Organic 3D Models**: Characters are rendered with distinct, human-like shapes using procedural geometry (no more blocky robots!).
+    *   **Unique Appearances**: Every NPC class has a unique look, from the Smith's apron to the Healer's robes.
     *   **Minimap**: Keep track of your exploration with a real-time minimap.
     *   Sleek "Dark Glass" interface with animations and clear feedback.
 

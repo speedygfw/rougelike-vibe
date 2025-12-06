@@ -291,14 +291,158 @@ export class ModelLoader {
 
             group.add(body);
 
+        } else if (entity.type === 'npc' && !entity.name.includes("Elder")) {
+            // Detailed NPC Handling
+            const name = entity.name;
+            let tunicColor = 0x4caf50; // Default Green
+            let hasApron = false;
+            let hasRobes = false;
+            let hasArmor = false;
+            let weaponType = 'none'; // 'hammer', 'sword_back', 'staff_hand'
+
+            if (name.includes("Barin")) {
+                tunicColor = 0x8d6e63; // Brown
+                hasApron = true;
+                weaponType = 'hammer';
+            } else if (name.includes("Mila")) {
+                tunicColor = 0x4fc3f7; // Light Blue
+                hasRobes = true;
+            } else if (name.includes("Thorne")) {
+                tunicColor = 0x757575; // Grey
+                hasArmor = true;
+                weaponType = 'sword_back';
+            } else if (name.includes("Rowan")) {
+                tunicColor = 0x5d4037; // Dark Brown (Farmer)
+            } else if (name.includes("Elara")) {
+                tunicColor = 0x9c27b0; // Purple (Traveler)
+            }
+
+            // Body
+            let bodyGeo;
+            if (hasRobes) {
+                bodyGeo = new THREE.CylinderGeometry(0.15, 0.3, 0.6, 8);
+            } else {
+                bodyGeo = new THREE.BoxGeometry(0.4, 0.5, 0.2);
+            }
+
+            const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({ color: tunicColor }));
+            body.position.y = hasRobes ? 0.3 : 0.5;
+            body.name = 'body';
+
+            // Head
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), faceMaterials);
+            head.position.y = hasRobes ? 0.45 : 0.4;
+            body.add(head);
+
+            // Hair/Hat (Simple top box)
+            const hairColor = name.includes("Mila") ? 0xffeb3b : (name.includes("Barin") ? 0x3e2723 : 0x5d4037);
+            const hair = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.05, 0.27), new THREE.MeshStandardMaterial({ color: hairColor }));
+            hair.position.y = 0.15;
+            head.add(hair);
+
+            // Arms
+            const armGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+            const lArm = new THREE.Mesh(armGeo, skinMat);
+            lArm.position.set(-0.3, 0, 0);
+            if (hasRobes) lArm.position.set(-0.25, -0.1, 0);
+            body.add(lArm);
+            const rArm = new THREE.Mesh(armGeo, skinMat);
+            rArm.position.set(0.3, 0, 0);
+            if (hasRobes) rArm.position.set(0.25, -0.1, 0);
+            body.add(rArm);
+
+            // Hands
+            const handGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const lHand = new THREE.Mesh(handGeo, skinMat);
+            lHand.position.y = -0.25;
+            lArm.add(lHand);
+            const rHand = new THREE.Mesh(handGeo, skinMat);
+            rHand.position.y = -0.25;
+            rArm.add(rHand);
+
+
+            // Legs (if not robes)
+            if (!hasRobes) {
+                const legGeo = new THREE.BoxGeometry(0.12, 0.4, 0.12);
+                const lLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({ color: 0x3e2723 }));
+                lLeg.position.set(-0.1, 0.2, 0);
+                group.add(lLeg);
+                const rLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({ color: 0x3e2723 }));
+                rLeg.position.set(0.1, 0.2, 0);
+                group.add(rLeg);
+            }
+
+            // Accessories
+            if (hasApron) {
+                const apron = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.05), new THREE.MeshStandardMaterial({ color: 0x3e2723 })); // Leather
+                apron.position.set(0, -0.05, 0.12);
+                body.add(apron);
+            }
+
+            if (hasArmor) {
+                const pauldronGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+                const pauldronMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+                const lPaul = new THREE.Mesh(pauldronGeo, pauldronMat);
+                lPaul.position.set(0, 0.15, 0);
+                lArm.add(lPaul); // Attach to arm so it moves
+                const rPaul = new THREE.Mesh(pauldronGeo, pauldronMat);
+                rPaul.position.set(0, 0.15, 0);
+                rArm.add(rPaul);
+            }
+
+            if (weaponType === 'hammer') {
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8), new THREE.MeshStandardMaterial({ color: 0x5d4037 }));
+                handle.position.set(0.1, 0.1, -0.15); // On back
+                handle.rotation.z = Math.PI / 4;
+                body.add(handle);
+                const head = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.25, 0.15), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+                head.position.y = 0.3;
+                handle.add(head);
+            } else if (weaponType === 'sword_back') {
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+                handle.position.set(0, 0, -0.15);
+                handle.rotation.z = -Math.PI / 4;
+                body.add(handle);
+                const guard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.05), new THREE.MeshStandardMaterial({ color: 0xffd700 }));
+                guard.position.y = 0.25;
+                handle.add(guard);
+            }
+
+            group.add(body);
+
         } else if (entity.type === 'player' || entity.constructor.name === 'Player') {
             const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.2), mat);
             body.position.y = 0.5;
             body.name = 'body';
 
+            // Backpack
+            const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.15), new THREE.MeshStandardMaterial({ color: 0x8d6e63 }));
+            backpack.position.set(0, 0, -0.15); // Back
+            body.add(backpack);
+
+            // Bedroll on backpack
+            const bedroll = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.35), new THREE.MeshStandardMaterial({ color: 0xef5350 }));
+            bedroll.rotation.z = Math.PI / 2;
+            bedroll.position.y = 0.25;
+            backpack.add(bedroll);
+
+            // Cape (if high level? Or default) - Let's add a small cape
+            const capeGeo = new THREE.BoxGeometry(0.35, 0.6, 0.02);
+            const cape = new THREE.Mesh(capeGeo, new THREE.MeshStandardMaterial({ color: 0xff0000 })); // Red cape
+            cape.position.set(0, -0.1, -0.11);
+            // cape.rotation.x = 0.1; // Slightly flared
+            body.add(cape);
+
+
             const head = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), faceMaterials);
             head.position.y = 0.4;
             body.add(head);
+
+            // Helmet/Hat?
+            const hat = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.05, 0.27), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+            hat.position.y = 0.15;
+            head.add(hat);
+
 
             const armGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
             const lArm = new THREE.Mesh(armGeo, skinMat);

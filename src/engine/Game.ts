@@ -3,6 +3,7 @@ import MapGenerator, { MapData, Room } from './MapGenerator.js';
 import Player from '../entities/Player.js';
 import Enemy from '../entities/Enemy.js';
 import NPC from '../entities/NPC.js';
+import Entity from '../entities/Entity.js';
 import {
     Potion,
     ScrollOfFireball,
@@ -648,6 +649,7 @@ export default class Game {
 
     handleInput(e: KeyboardEvent) {
         if (this.ui.isDialogueOpen()) {
+            console.log('DEBUG: Dialogue is open, handling UI input');
             if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
                 this.ui.hideDialogue();
             }
@@ -710,6 +712,7 @@ export default class Game {
                 console.log('DEBUG: No enemy found, checking NPC/Door/Move');
                 // Check for NPC
                 const npc = this.npcs.find(n => n.x === targetX && n.y === targetY);
+                console.log(`DEBUG: Checking for NPC at ${targetX},${targetY}. Found? ${!!npc}. Total NPCs: ${this.npcs.length}`);
                 if (npc) {
                     console.log('DEBUG: NPC found');
                     const interaction = npc.interact();
@@ -1139,6 +1142,14 @@ export default class Game {
             this.player.mana = Math.min(this.player.mana + 1, this.player.maxMana);
         }
 
+        // Update NPCs
+        const allEntities: Entity[] = [...this.enemies, ...this.npcs];
+        if (this.player) allEntities.push(this.player);
+
+        this.npcs.forEach(npc => {
+            npc.takeTurn(this.map, allEntities);
+        });
+
         this.isPlayerTurn = true;
         this.update();
     }
@@ -1239,8 +1250,10 @@ export default class Game {
 
         this.npcs.forEach(npc => {
             if (this.visibleTiles.has(`${npc.x},${npc.y}`)) {
+                // console.log(`DEBUG: Drawing NPC ${npc.name} at ${npc.x},${npc.y}`);
                 this.renderer.drawEntity(npc);
             } else {
+                // console.log(`DEBUG: Hiding NPC ${npc.name} at ${npc.x},${npc.y} (Not visible)`);
                 this.renderer.hideEntity(npc);
             }
         });
@@ -1291,7 +1304,7 @@ export default class Game {
 
                 if (mapX >= 0 && mapX < this.map.width && mapY >= 0 && mapY < this.map.height) {
                     const key = `${mapX},${mapY}`;
-                    if (this.exploredTiles.has(key) || this.player.level === 0) { // Always show village
+                    if (this.exploredTiles.has(key)) { // Fog of War applies to village too
                         const tile = this.map.tiles[mapY][mapX];
                         if (tile.startsWith('wall') || tile === 'door_closed') {
                             ctx.fillStyle = '#555';

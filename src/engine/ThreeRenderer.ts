@@ -14,7 +14,7 @@ export default class ThreeRenderer {
 
     // Cache for meshes
     tileMeshes: THREE.InstancedMesh[] = [];
-    propMeshes: THREE.Group[] = [];
+    propMeshes: THREE.Object3D[] = [];
     entityMeshes: Map<Entity, THREE.Object3D> = new Map();
     dynamicLights: Map<string, THREE.PointLight> = new Map();
 
@@ -131,14 +131,15 @@ export default class ThreeRenderer {
         });
 
         // Props
-        const propGroup = new THREE.Group();
-        this.scene.add(propGroup);
-        this.propMeshes.push(propGroup);
+        this.propMeshes.forEach(m => this.scene.remove(m));
+        this.propMeshes = [];
 
         map.props.forEach((prop, i) => {
             const mesh = this.modelLoader.createProp(prop.type, prop.x, prop.y);
             if (mesh) {
-                propGroup.add(mesh);
+                this.scene.add(mesh);
+                mesh.userData = { x: prop.x, y: prop.y };
+                this.propMeshes.push(mesh);
             }
 
             if (prop.type === 'torch' || prop.type === 'fireplace') {
@@ -157,10 +158,15 @@ export default class ThreeRenderer {
         for (let y = 0; y < map.height; y++) {
             for (let x = 0; x < map.width; x++) {
                 if (map.tiles[y][x] === 'stairs') {
+                    // Only add entrance prop in village level 0 maybe? or check if map has it. 
+                    // The previous code added it for every stairs.
                     const entrance = this.modelLoader.createProp('dungeon_entrance', x, y);
                     if (entrance) {
-                        propGroup.add(entrance);
+                        this.scene.add(entrance);
+                        entrance.userData = { x: x, y: y };
+                        this.propMeshes.push(entrance);
 
+                        // keep light logic...
                         // Add dynamic lights for the entrance torches
                         const key1 = `entrance_light_1`;
                         const key2 = `entrance_light_2`;
@@ -241,7 +247,7 @@ export default class ThreeRenderer {
                 const key = `${x},${y}`;
                 const tile = game.map.tiles[y][x];
                 const isVisible = game.visibleTiles.has(key);
-                const isExplored = game.exploredTiles.has(key) || game.player.level === 0; // Village always explored
+                const isExplored = game.exploredTiles.has(key); // Fog of War applies to village too
 
                 const updateMesh = (mesh: THREE.InstancedMesh, idx: number, baseColor: number, dimColor: number) => {
                     if (!isExplored) {

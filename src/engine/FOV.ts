@@ -74,7 +74,8 @@ export default class FOV {
 
     isBlocked(x: number, y: number) {
         if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) return true;
-        return this.map.tiles[y][x] === 'wall';
+        const tile = this.map.tiles[y][x];
+        return tile === 'wall' || tile === 'wall_wood' || tile === 'door_closed';
     }
 
 }
