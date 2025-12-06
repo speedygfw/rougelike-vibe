@@ -51,7 +51,7 @@ export default class Game {
         this.renderer = new ThreeRenderer();
         this.audio = new AudioSystem();
         this.inputHandler = new InputHandler();
-        this.combatSystem = new CombatSystem();
+        this.combatSystem = new CombatSystem(this);
         this.ui = new UIManager();
         this.mapGenerator = new MapGenerator(60, 40);
         this.map = null;
@@ -78,6 +78,10 @@ export default class Game {
         window.addEventListener('castSpell', (e: any) => {
             this.castSpell(e.detail.index);
         });
+    }
+
+    log(message: string, type?: string) {
+        this.ui.log(message, type);
     }
 
     createSaveControls() {
@@ -1171,7 +1175,8 @@ export default class Game {
 
         if (this.player && this.player.hp <= 0 && this.gameState !== 'GAMEOVER') {
             this.gameState = 'GAMEOVER';
-            document.getElementById('game-over').style.display = 'flex';
+            const gameOver = document.getElementById('game-over');
+            if (gameOver) gameOver.style.display = 'flex';
             this.ui.log("You have died...", 'important');
         }
     }

@@ -1,9 +1,11 @@
 export default class Audio {
+    ctx: AudioContext;
+
     constructor() {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
-    playTone(freq, type, duration) {
+    playTone(freq: number, type: OscillatorType, duration: number) {
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }

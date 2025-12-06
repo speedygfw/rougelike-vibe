@@ -10,7 +10,7 @@ export class Item extends Entity {
         this.name = name;
     }
 
-    use(player: Player, game: Game): boolean {
+    use(_player: Player, _game: Game): boolean {
         return false;
     }
 }
@@ -23,7 +23,7 @@ export class Potion extends Item {
         this.healAmount = 20;
     }
 
-    use(player: Player, game: Game): boolean {
+    use(player: Player, _game: Game): boolean {
         if (player.hp >= player.maxHp) {
             return false; // Don't use if full health
         }
@@ -46,7 +46,7 @@ export class Scroll extends Item {
         return this.activate(player, game);
     }
 
-    activate(player: Player, game: Game): boolean {
+    activate(_player: Player, _game: Game): boolean {
         return false;
     }
 }
@@ -207,7 +207,7 @@ export class HarmonicCore extends Item {
         super(x, y, 'Harmonic Core', '💠', '#00ffff');
     }
 
-    use(player: Player, game: Game): boolean {
+    use(_player: Player, _game: Game): boolean {
         // Picking up/Using the Core triggers victory
         return true; // Logic handled in Game.js pickup or use
     }
@@ -218,7 +218,7 @@ export class Key extends Item {
         super(x, y, 'Golden Key', '🔑', '#ffd700');
     }
 
-    use(player: Player, game: Game): boolean {
+    use(_player: Player, game: Game): boolean {
         game.log("This key can open locked doors.", 'info');
         return false; // Not usable directly, used on interaction
     }

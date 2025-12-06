@@ -1,9 +1,11 @@
 export default class CombatSystem {
-    constructor(game) {
+    game: any;
+
+    constructor(game: any) {
         this.game = game;
     }
 
-    resolveAttack(attacker, defender) {
+    resolveAttack(attacker: any, defender: any) {
         // Simple hit chance
         if (Math.random() > 0.8) {
             return {

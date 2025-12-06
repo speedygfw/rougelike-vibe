@@ -63,6 +63,6 @@ export const Themes = {
 
 export function getRandomTheme() {
     const keys = Object.keys(Themes);
-    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    const randomKey = keys[Math.floor(Math.random() * keys.length)] as keyof typeof Themes;
     return Themes[randomKey];
 }

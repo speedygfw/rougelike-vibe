@@ -1,9 +1,11 @@
 export default class InputHandler {
+    command: any;
+
     constructor() {
         this.command = null;
     }
 
-    handleKey(e) {
+    handleKey(e: KeyboardEvent) {
         this.command = null;
 
         if (e.key === 'ArrowUp' || e.key === 'w') return { type: 'move', dx: 0, dy: -1 };

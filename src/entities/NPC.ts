@@ -4,6 +4,7 @@ export default class NPC extends Entity {
     name: string;
     dialogue: string[];
     image?: string;
+    faction: string;
 
     constructor(x: number, y: number, name: string, dialogue: string[], image?: string) {
         super(x, y, '@', '#00ffff'); // Cyan color for NPCs

@@ -1,10 +1,20 @@
 export default class FOV {
-    constructor(map) {
+    map: any;
+    visible: Set<string>;
+    multipliers: number[][];
+
+    constructor(map: any) {
         this.map = map;
         this.visible = new Set();
+        this.multipliers = [
+            [1, 0, 0, -1, -1, 0, 0, 1],
+            [0, 1, -1, 0, 0, -1, 1, 0],
+            [0, 1, 1, 0, 0, -1, -1, 0],
+            [1, 0, 0, 1, -1, 0, 0, -1]
+        ];
     }
 
-    compute(px, py, radius) {
+    compute(px: number, py: number, radius: number) {
         this.visible.clear();
         this.visible.add(`${px},${py}`);
 
@@ -15,7 +25,7 @@ export default class FOV {
         return this.visible;
     }
 
-    castLight(cx, cy, row, start, end, radius, xx, xy, yx, yy) {
+    castLight(cx: number, cy: number, row: number, start: number, end: number, radius: number, xx: number, xy: number, yx: number, yy: number) {
         if (start < end) return;
 
         let radiusSq = radius * radius;
@@ -62,16 +72,9 @@ export default class FOV {
         }
     }
 
-    isBlocked(x, y) {
+    isBlocked(x: number, y: number) {
         if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) return true;
         return this.map.tiles[y][x] === 'wall';
     }
 
-    // Octant multipliers
-    multipliers = [
-        [1, 0, 0, -1, -1, 0, 0, 1],
-        [0, 1, -1, 0, 0, -1, 1, 0],
-        [0, 1, 1, 0, 0, -1, -1, 0],
-        [1, 0, 0, 1, -1, 0, 0, -1]
-    ];
 }

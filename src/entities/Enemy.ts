@@ -177,7 +177,7 @@ export default class Enemy extends Entity {
         }
     }
 
-    findTarget(player: Player, enemies: Enemy[]) {
+    findTarget(player: Player, enemies: Enemy[]): Entity | null {
         let targets: Entity[] = [];
 
         // Player is always a potential target (assume player faction is 'player')

@@ -1,4 +1,3 @@
-import { getRandomTheme } from './Theme.js';
 
 export interface MapData {
     width: number;

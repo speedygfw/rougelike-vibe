@@ -427,7 +427,7 @@ export default class ThreeRenderer {
 
     updateLights() {
         const time = Date.now() * 0.005;
-        this.dynamicLights.forEach((light, key) => {
+        this.dynamicLights.forEach((light, _key) => {
             // Flicker intensity
             light.intensity = 1.0 + Math.sin(time * 10 + Math.random()) * 0.1;
             // Slight position jitter
@@ -513,7 +513,7 @@ export default class ThreeRenderer {
         }
     }
 
-    drawMinimap(map: MapData, player: any, exploredTiles: Set<string>) {
+    drawMinimap(_map: MapData, _player: any, _exploredTiles: Set<string>) {
         // Not implemented in 3D view
     }
 
