@@ -1,69 +1,64 @@
-# 📖 Mein Roguelike - Game Guide
+# 📖 Mein Roguelike - Game Guide & Bestiary
 
-Welcome to the comprehensive guide for **Mein Roguelike**. This document will help you master the mechanics, understand the world, and survive the depths of the dungeon.
+Welcome, traveler. This tome contains the accumulated knowledge of Aethelgard. Use it wisely to survive the depths.
 
-## 🕹️ Controls
+## 🕹️ Controls (Keyboard & Mouse)
 
 | Key | Action |
 | :--- | :--- |
-| **Arrow Keys** | Move your character / Attack enemies by bumping into them |
-| **Space / Enter** | Interact with NPCs / Close Dialogue |
-| **G** | Pick up items from the ground |
-| **I** | Toggle Inventory Screen |
-| **B** | Toggle Spell Book |
-| **1 - 9** | Cast learned spells |
-| **Mouse Hover** | View item details in Inventory/Spellbook |
-
-## 🌍 The World
-
-### The Village of Oakhaven
-Your journey begins here. It is a safe haven before you enter the dungeon.
-*   **Exploration**: The village is covered in fog. Move around to explore houses and find villagers.
-*   **NPCs**:
-    *   **Elder Aethel**: Gives you the main quest and lore.
-    *   **Barin the Blacksmith**: Talk to him about weapons and the mines.
-    *   **Mila the Healer**: Offers wisdom on survival.
-    *   **Thorne the Guard**: Keeps the village safe.
-*   **Interaction**: Stand next to a villager and press **Space** (or walk into them) to talk.
-
-### The Dungeon
-The dungeon consists of **20 Levels**.
-*   **Levels 1-19**: Procedurally generated mix of Rooms and Caves. Find the stairs (`>`) to descend.
-*   **Level 20**: The final boss arena.
-*   **Fog of War**: You can only see what is in your Line of Sight. Unseen areas are black.
+| **Arrow Keys** | **Move** your character. Bump into enemies to **Attack**. |
+| **G** | **Pick Up** items on the ground. |
+| **I** | Open/Close **Inventory**. Click items to Use/Equip. |
+| **B** | Open/Close **Spell Book**. |
+| **1-9** | Quick Cast Spells directly. |
+| **Space** | **Wait** one turn (regenerate HP/Mana slightly). |
+| **Mouse** | Click UI buttons, Inventory items, and Dialogue choices. |
 
 ## ⚔️ Classes
 
-| Class | HP | Mana | Playstyle |
-| :--- | :--- | :--- | :--- |
-| **Warrior** | High | Low | **Tank & Smash**. Starts with higher health and strength. Good for beginners. |
-| **Mage** | Low | High | **Glass Cannon**. Relies on powerful spells like *Fireball* and *Freeze*. |
-| **Rogue** | Med | Med | **Stealth & Crit**. Balanced stats with high critical hit chance and mobility spells. |
+### 🛡️ Warrior
+*   **Strengths**: High HP, starts with Sword & Shield.
+*   **Playstyle**: Tank hits and deal consistent melee damage. Best for beginners.
 
-## 🪄 Magic System (Spells)
+### 🔮 Mage
+*   **Strengths**: High Mana, starts with Spell Scrolls.
+*   **Playstyle**: Destroy enemies from afar with Fireballs. Fragile in melee.
 
-You can find **Spell Scrolls** in the dungeon. Picking one up adds it to your Spell Book (`B`).
-*   **Magic Missile**: Basic ranged damage.
-*   **Fireball**: High area-of-effect damage.
-*   **Heal**: Restores HP.
-*   **Teleport**: Instantly move to a random safety tile.
-*   **Shadow Cloak**: Become invisible to enemies for a short time.
+### 🗡️ Rogue
+*   **Strengths**: High Critical Hit chance, starts with Dagger.
+*   **Playstyle**: Hit hard and fast. Avoid getting surrounded.
 
-## 🛡️ Equipment & Items
+## 📜 Spells
 
-*   **Weapons**: Swords, Axes, Daggers. Increase your Attack.
-*   **Armor**: Leather, Chain, Plate. Increase your Defense.
-*   **Potions**:
-    *   🔴 **Health Potion**: Restores HP.
-    *   🔵 **Mana Potion**: Restores Mana.
+Magic is a powerful tool. Find scrolls to learn new spells!
 
-## 🦠 Bestiary (Enemies)
+*   **Fireball**: Launches a ball of fire that explodes on impact.
+*   **Frost Nova**: Freezes all nearby enemies, preventing them from moving.
+*   **Chain Lightning**: Arcs between multiple enemies for high damage.
+*   **Teleport**: Instantly warp to a random safe location.
+*   **Heal**: Restore lost Health.
+*   **Stone Skin**: Temporarily increase your defense.
+*   **Time Warp**: Take 5 extra turns instantly!
 
-*   **Goblin**: Weak, but fast.
-*   **Skeleton**: Durable, undead warrior.
-*   **Orc**: Strong hitter with high HP.
-*   **Bat**: Very fast, hard to hit.
-*   **The Dissonance**: An ancient evil waiting at the bottom...
+## 👹 Bestiary (Enemies)
 
----
-*Good luck, traveler. The echoes await.*
+| Enemy | Danger | Behavior |
+| :--- | :--- | :--- |
+| **Rat** | 🟢 Low | Weak and cowardly. Swarms in groups. |
+| **Bat** | 🟢 Low | Fast movement, erratic patterns. |
+| **Goblin** | 🟡 Medium | Basic infantry. Carries crude weapons. |
+| **Skeleton** | 🟡 Medium | Undead. Resistant to piercing. |
+| **Orc** | 🟠 High | Strong and tough. Hits hard. |
+| **Ogre** | 🔴 Very High | Massive HP and damage. Slow but deadly. |
+| **Ghost** | 🟠 High | Can pass through walls. Hard to hit. |
+| **Dragon (Boss)** | ☠️ Extreme | The Avatar of Dissonance. Breaches fire and magic. |
+
+## 💡 Tips for Survival
+
+1.  **Explore Thoroughly**: The Village is safe. Talk to everyone before entering the dungeon.
+2.  **Manage Resources**: Don't waste simple potions. Save them for tough fights.
+3.  **Use Doorways**: Fight enemies one at a time in narrow corridors.
+4.  **Watch the Time**: Day/Night cycles are cosmetic in the village, but deep in the dungeon, darkness is eternal.
+5.  **Run Away**: If you're low on HP, use a Teleport scroll or run to a cleared room to heal.
+
+Good luck, hero. Aethelgard depends on you.

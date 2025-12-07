@@ -315,6 +315,10 @@ export default class Game {
             map = this.mapGenerator.generateVillage();
             this.map = map;
 
+            // Reset Exploration for Village (Standard FOV)
+            this.exploredTiles.clear();
+            this.visibleTiles.clear();
+
             // Initialize player if not exists
             if (!this.player) {
                 // Use map.startX/Y if available, otherwise fallback to center
@@ -333,6 +337,11 @@ export default class Game {
         } else {
             map = this.mapGenerator.generate();
             this.map = map;
+
+            // Reset Exploration for new level
+            this.exploredTiles.clear();
+            this.visibleTiles.clear();
+
             // Spawn Enemies and Items in other rooms
             this.enemies = [];
             this.items = [];
@@ -640,11 +649,13 @@ export default class Game {
     }
 
     updateFOV() {
-        if (!this.player || !this.fov) return;
+        if (!this.player || !this.map) return;
         this.visibleTiles = this.fov.compute(this.player.x, this.player.y, this.fovRadius);
         this.visibleTiles.forEach(key => {
             this.exploredTiles.add(key);
         });
+        // Update Renderer Visibility
+        this.renderer.updateVisibility(this.visibleTiles, this.exploredTiles, this.player.level);
     }
 
     handleInput(e: KeyboardEvent) {

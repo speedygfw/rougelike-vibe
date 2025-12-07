@@ -174,20 +174,16 @@ describe('Game Features', () => {
             expect(map.tiles[0][0]).toBe('wall');
         });
 
-        it('should randomly choose between dungeon and caves', () => {
+        it('should choose biomes based on level', () => {
             const mapGen = new MapGenerator(50, 30);
-            // Mock Math.random to force dungeon
-            const originalRandom = Math.random;
-            Math.random = () => 0.1;
-            const dungeonMap = mapGen.generate();
+
+            // Level 1: Dungeon (Has rooms)
+            const dungeonMap = mapGen.generate(1);
             expect(dungeonMap.rooms.length).toBeGreaterThan(0);
 
-            // Mock Math.random to force caves
-            Math.random = () => 0.9;
-            const caveMap = mapGen.generate();
+            // Level 6: Caves (No rooms object, unstructured)
+            const caveMap = mapGen.generate(6);
             expect(caveMap.rooms.length).toBe(0);
-
-            Math.random = originalRandom;
         });
     });
 });

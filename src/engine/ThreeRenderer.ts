@@ -31,6 +31,18 @@ export default class ThreeRenderer {
     mapHeight: number = 0;
     mapTiles: string[][] = [];
 
+    // Day/Night Cycle
+    dayTime: number = 8; // Start at 8:00 AM
+    dayDuration: number = 7200; // 2 hours (7200s) for full cycle
+    isDayCycle: boolean = false;
+    sunLight?: THREE.DirectionalLight;
+    ambientLight?: THREE.AmbientLight;
+
+    // UI & Weather
+    clockElement: HTMLElement | null = null;
+    weather: 'none' | 'rain' | 'snow' = 'none';
+    weatherParticles: { mesh: THREE.Mesh, velocity: THREE.Vector3 }[] = [];
+
     constructor() {
         this.container = document.body; // Or specific element if needed
         this.modelLoader = new ModelLoader();
@@ -81,12 +93,13 @@ export default class ThreeRenderer {
         this.controls.maxZoom = 2.0;
 
         // Lock Rotation (Isometric)
-        this.controls.minAzimuthAngle = Math.PI / 4; // Fixed 45 degrees
-        this.controls.maxAzimuthAngle = Math.PI / 4;
+        // Free Rotation (Unlocked for Inspecting)
+        this.controls.minAzimuthAngle = -Infinity;
+        this.controls.maxAzimuthAngle = Infinity;
 
-        // Limit Tilt
-        this.controls.minPolarAngle = 0; // Top down
-        this.controls.maxPolarAngle = Math.PI / 2.5; // Angled view
+        // Limit Tilt (Standard orbit)
+        this.controls.minPolarAngle = 0;
+        this.controls.maxPolarAngle = Math.PI / 2;
 
         // Main directional light (Sunlight/Moonlight)
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -117,11 +130,65 @@ export default class ThreeRenderer {
         this.mapHeight = map.height;
         this.mapTiles = map.tiles;
 
-        // Clear old meshes
-        this.tileMeshes.forEach(m => this.scene.remove(m));
+        // Completely Clear Scene (Robust Reset)
+        for (let i = this.scene.children.length - 1; i >= 0; i--) {
+            this.scene.remove(this.scene.children[i]);
+        }
+
         this.tileMeshes = [];
-        this.propMeshes.forEach(m => this.scene.remove(m));
         this.propMeshes = [];
+        this.entityMeshes.clear();
+
+        this.dynamicLights.clear();
+
+        this.dynamicLights.clear();
+        this.particles = [];
+        this.floatingTexts = [];
+
+        // Re-add Atmospheric Lighting
+        // Re-add Atmospheric Lighting
+        // Darker ambient for mood (Default)
+        this.ambientLight = new THREE.AmbientLight(0x333344, 0.4);
+        this.scene.add(this.ambientLight);
+
+        // Moonlight / Dim light (Default)
+        this.sunLight = new THREE.DirectionalLight(0x8888ff, 0.5);
+        this.sunLight.position.set(10, 20, 10);
+        this.sunLight.castShadow = true;
+        this.scene.add(this.sunLight);
+
+        // Fog Logic
+        this.isDayCycle = (map.level === 0);
+
+        if (map.level === 0) {
+            // Village: Dynamic Fog (Will be updated by cycle)
+            this.scene.fog = new THREE.FogExp2(0xffffff, 0.02);
+            this.renderer.setClearColor(0x87CEEB); // Sky Blue
+            // Create Clock UI if not exists
+            if (!this.clockElement) {
+                this.clockElement = document.createElement('div');
+                this.clockElement.style.position = 'absolute';
+                this.clockElement.style.top = '10px';
+                this.clockElement.style.left = '50%';
+                this.clockElement.style.transform = 'translateX(-50%)';
+                this.clockElement.style.color = 'white';
+                this.clockElement.style.fontFamily = 'monospace';
+                this.clockElement.style.fontSize = '24px';
+                this.clockElement.style.fontWeight = 'bold';
+                this.clockElement.style.textShadow = '2px 2px 0 #000';
+                this.clockElement.style.pointerEvents = 'none';
+                this.container.appendChild(this.clockElement);
+            }
+            this.clockElement.style.display = 'block';
+        } else {
+            // Dungeon: Pitch Black Fade
+            // range 20-60 ensures visibility from camera distance (~35)
+            this.scene.fog = new THREE.Fog(0x000000, 20, 60);
+            this.renderer.setClearColor(0x000000);
+            if (this.clockElement) this.clockElement.style.display = 'none';
+        }
+
+        console.log("initMap: Scene cleared and lights re-added.");
 
         // Create Tile Meshes via ModelLoader
         const meshes = this.modelLoader.createTileMeshes(map);
@@ -130,10 +197,7 @@ export default class ThreeRenderer {
             this.tileMeshes.push(mesh);
         });
 
-        // Props
-        this.propMeshes.forEach(m => this.scene.remove(m));
-        this.propMeshes = [];
-
+        // Props logic follows...
         map.props.forEach((prop, i) => {
             const mesh = this.modelLoader.createProp(prop.type, prop.x, prop.y);
             if (mesh) {
@@ -158,9 +222,10 @@ export default class ThreeRenderer {
         for (let y = 0; y < map.height; y++) {
             for (let x = 0; x < map.width; x++) {
                 if (map.tiles[y][x] === 'stairs') {
-                    // Only add entrance prop in village level 0 maybe? or check if map has it. 
-                    // The previous code added it for every stairs.
-                    const entrance = this.modelLoader.createProp('dungeon_entrance', x, y);
+                    // Level 0 (Village) uses a Portal facade as the entrance
+                    // Other levels use actual stairs
+                    const propType = (map.level === 0) ? 'dungeon_entrance' : 'stairs';
+                    const entrance = this.modelLoader.createProp(propType, x, y);
                     if (entrance) {
                         this.scene.add(entrance);
                         entrance.userData = { x: x, y: y };
@@ -190,6 +255,14 @@ export default class ThreeRenderer {
                 }
             }
         }
+
+        // Create Black Underlay (Fog of War Background for holes)
+        const planeGeo = new THREE.PlaneGeometry(this.mapWidth * 5, this.mapHeight * 5); // Huge plane
+        const planeMat = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false }); // Pure black, ignore fog
+        const plane = new THREE.Mesh(planeGeo, planeMat);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.set(this.mapWidth / 2, -0.1, this.mapHeight / 2);
+        this.scene.add(plane);
     }
 
 
@@ -206,7 +279,7 @@ export default class ThreeRenderer {
     }
 
     render(game: any) {
-        if (game.player) {
+        if (game.player && !game.debug) {
             const targetX = game.player.x;
             const targetZ = game.player.y;
 
@@ -214,87 +287,10 @@ export default class ThreeRenderer {
             this.controls.target.set(targetX, 0, targetZ);
             this.camera.position.copy(this.controls.target).add(offset);
             this.controls.update();
-
         }
 
-        // Update other meshes visibility (simplified: just show all for now or implement similar logic)
-        // For now, we just update the first two (floor/wall) in the loop above.
-        // To support all, we need a more generic approach or repeat the loop for each mesh type.
-        // Given the complexity, let's just ensure the new meshes are added to tileMeshes and we iterate them all?
-        // Actually, the loop above uses specific indices (fIdx, wIdx).
-        // We need to track indices for all types.
-
-        // Re-implement visibility loop for all types
-        // Reset indices
-        let fIdx = 0;
-        let wIdx = 0;
-        let gIdx = 0;
-        let dIdx = 0;
-        let wwIdx = 0;
-        let waIdx = 0;
-        const floorMesh = this.tileMeshes[0];
-        const wallMesh = this.tileMeshes[1];
-        const grassMesh = this.tileMeshes[2];
-        const dirtMesh = this.tileMeshes[3];
-        const woodWallMesh = this.tileMeshes[4];
-        const waterMesh = this.tileMeshes[5];
-
-        const dummy = new THREE.Object3D();
-        const _color = new THREE.Color();
-
-        for (let y = 0; y < game.map.height; y++) {
-            for (let x = 0; x < game.map.width; x++) {
-                const key = `${x},${y}`;
-                const tile = game.map.tiles[y][x];
-                const isVisible = game.visibleTiles.has(key);
-                const isExplored = game.exploredTiles.has(key); // Fog of War applies to village too
-
-                const updateMesh = (mesh: THREE.InstancedMesh, idx: number, baseColor: number, dimColor: number) => {
-                    if (!isExplored) {
-                        dummy.scale.set(0, 0, 0);
-                        dummy.updateMatrix();
-                        mesh.setMatrixAt(idx, dummy.matrix);
-                    } else {
-                        // We need to restore the matrix. Since we don't cache ALL matrices in this simplified version,
-                        // we might have issues if we don't.
-                        // However, for static tiles, we can re-calculate position.
-                        dummy.position.set(x, 0, y);
-                        dummy.scale.set(1, 1, 1);
-                        dummy.rotation.set(0, 0, 0);
-                        if (tile.startsWith('floor')) dummy.rotation.y = (x + y) % 4 * (Math.PI / 2); // Deterministic rotation
-                        dummy.updateMatrix();
-                        mesh.setMatrixAt(idx, dummy.matrix);
-
-                        if (isVisible) {
-                            _color.setHex(baseColor);
-                        } else {
-                            _color.setHex(dimColor);
-                        }
-                        if (mesh.instanceColor) mesh.setColorAt(idx, _color);
-                    }
-                };
-
-                if (tile === 'floor' || tile === 'stairs' || tile.startsWith('door')) {
-                    updateMesh(floorMesh, fIdx++, 0x888888, 0x444444);
-                } else if (tile === 'wall' || tile === 'door_closed') {
-                    updateMesh(wallMesh, wIdx++, 0xaaaaaa, 0x555555);
-                } else if (tile === 'floor_grass') {
-                    updateMesh(grassMesh, gIdx++, 0x88cc88, 0x446644);
-                } else if (tile === 'floor_dirt') {
-                    updateMesh(dirtMesh, dIdx++, 0x8B4513, 0x452209);
-                } else if (tile === 'wall_wood') {
-                    updateMesh(woodWallMesh, wwIdx++, 0x8B4513, 0x452209);
-                } else if (tile === 'water') {
-                    updateMesh(waterMesh, waIdx++, 0x0088ff, 0x004488);
-                }
-            }
-        }
-
-        this.tileMeshes.forEach(m => {
-            m.instanceMatrix.needsUpdate = true;
-            if (m.instanceColor) m.instanceColor.needsUpdate = true;
-        });
-
+        // REMOVED DUPLICATE TILE UPDATE LOOP
+        // Visibility is handled by explicit calls to updateVisibility()
 
         // Update Particles
         for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -439,6 +435,124 @@ export default class ThreeRenderer {
             // Slight position jitter
             light.position.y = 1.0 + Math.sin(time * 5) * 0.05;
         });
+
+        if (this.isDayCycle) {
+            this.updateSunCycle();
+        }
+    }
+
+    updateSunCycle() {
+        // Advance time (1 sec real time = X game minutes)
+        // dt approx 0.016s (60fps)
+        const dt = 0.016;
+        const timeStep = (24 / this.dayDuration) * dt;
+        this.dayTime = (this.dayTime + timeStep) % 24;
+
+        // Update Clock UI
+        if (this.clockElement) {
+            const h = Math.floor(this.dayTime);
+            const m = Math.floor((this.dayTime - h) * 60);
+            const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            this.clockElement.innerText = `🕰️ ${timeString}`;
+        }
+
+        // Random Weather Change (very rare check)
+        if (Math.random() < 0.0005) {
+            const r = Math.random();
+            if (r < 0.6) this.weather = 'none';
+            else if (r < 0.8) this.weather = 'rain';
+            else this.weather = 'snow';
+        }
+
+        // Visuals based on time
+        const hour = this.dayTime;
+
+        let ambientColor = new THREE.Color(0x222244);
+        let sunColor = new THREE.Color(0x4444aa);
+        let ambientIntensity = 0.2;
+        let sunIntensity = 0.3;
+        let fogColor = new THREE.Color(0x111122);
+
+        // Sunrise (6-8)
+        if (hour >= 6 && hour < 8) {
+            const t = (hour - 6) / 2;
+            ambientColor.lerpColors(new THREE.Color(0x222244), new THREE.Color(0xffaa88), t); // Blue -> Orange
+            sunColor.lerpColors(new THREE.Color(0x4444aa), new THREE.Color(0xffaa00), t);
+            ambientIntensity = THREE.MathUtils.lerp(0.2, 0.6, t);
+            sunIntensity = THREE.MathUtils.lerp(0.3, 0.8, t);
+            fogColor.lerpColors(new THREE.Color(0x111122), new THREE.Color(0xffaa88), t);
+        }
+        // Day (8-18)
+        else if (hour >= 8 && hour < 18) {
+            // Midday peak check
+            let t = 1;
+            if (hour < 12) {
+                t = (hour - 8) / 4; // 0 to 1 scaling up brightness
+                ambientColor.lerpColors(new THREE.Color(0xffaa88), new THREE.Color(0xffffff), t);
+                sunColor.lerpColors(new THREE.Color(0xffaa00), new THREE.Color(0xffffee), t);
+                ambientIntensity = THREE.MathUtils.lerp(0.6, 0.8, t);
+                sunIntensity = THREE.MathUtils.lerp(0.8, 1.2, t);
+                fogColor.lerpColors(new THREE.Color(0xffaa88), new THREE.Color(0x87CEEB), t);
+            } else {
+                t = (hour - 12) / 6; // 0 to 1 scaling down towards sunset
+                // Stay bright mostly
+                ambientColor = new THREE.Color(0xffffff);
+                sunColor = new THREE.Color(0xffffee);
+                ambientIntensity = 0.8;
+                sunIntensity = 1.2;
+                fogColor = new THREE.Color(0x87CEEB);
+            }
+        }
+        // Sunset (18-20)
+        else if (hour >= 18 && hour < 20) {
+            const t = (hour - 18) / 2;
+            ambientColor.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0xff6666), t); // White -> Red
+            sunColor.lerpColors(new THREE.Color(0xffffee), new THREE.Color(0xff8800), t);
+            ambientIntensity = THREE.MathUtils.lerp(0.8, 0.4, t);
+            sunIntensity = THREE.MathUtils.lerp(1.2, 0.5, t);
+            fogColor.lerpColors(new THREE.Color(0x87CEEB), new THREE.Color(0x442222), t);
+        }
+        // Night (20-6)
+        else {
+            // Deep Night
+            ambientColor.setHex(0x111122);
+            sunColor.setHex(0x222255);
+            ambientIntensity = 0.2;
+            sunIntensity = 0.1;
+            fogColor.setHex(0x050510);
+        }
+
+        // Weather tinting (Rain makes it darker)
+        if (this.weather === 'rain') {
+            ambientIntensity *= 0.7;
+            ambientColor.lerp(new THREE.Color(0x444455), 0.5); // Grey tint
+            fogColor.lerp(new THREE.Color(0x333344), 0.5);
+        } else if (this.weather === 'snow') {
+            ambientIntensity *= 0.9;
+            ambientColor.lerp(new THREE.Color(0xeeeeff), 0.2); // White tint
+            fogColor.lerp(new THREE.Color(0xddddff), 0.3);
+        }
+
+        if (this.ambientLight) {
+            this.ambientLight.color.copy(ambientColor);
+            this.ambientLight.intensity = ambientIntensity;
+        }
+        if (this.sunLight) {
+            this.sunLight.color.copy(sunColor);
+            this.sunLight.intensity = sunIntensity;
+
+            // Move sun for shadows
+            const theta = (hour / 24) * Math.PI * 2 - (Math.PI / 2); // -PI/2 at 0h (midnight), 0 at 6h (sunrise), PI/2 at 12h, PI at 18h
+            // Sun rises East, Sets West? Isometric is weird. Just orbit Y.
+            this.sunLight.position.x = Math.cos(theta) * 20;
+            this.sunLight.position.y = Math.sin(theta) * 20;
+            this.sunLight.position.z = 10;
+        }
+
+        if (this.scene.fog && this.scene.fog instanceof THREE.FogExp2) {
+            this.scene.fog.color.copy(fogColor);
+            this.renderer.setClearColor(fogColor);
+        }
     }
 
     clear() {
@@ -488,7 +602,61 @@ export default class ThreeRenderer {
     }
 
     drawEffects() {
-        // Update Particles
+        // Update Weather Particles (Rain/Snow)
+        // Spawn
+        if (this.weather !== 'none' && this.weatherParticles.length < 500) {
+            // Spawn 2 per frame
+            for (let i = 0; i < 2; i++) {
+                let color = 0x8888ff; // Rain
+                let geo: THREE.BufferGeometry = new THREE.BoxGeometry(0.05, 0.5, 0.05);
+                let vel = new THREE.Vector3(0, -0.5, 0);
+
+                if (this.weather === 'snow') {
+                    color = 0xffffff;
+                    geo = new THREE.BoxGeometry(0.08, 0.08, 0.08); // Flake
+                    vel = new THREE.Vector3((Math.random() - 0.5) * 0.05, -0.05, (Math.random() - 0.5) * 0.05);
+                }
+
+                const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 });
+                const mesh = new THREE.Mesh(geo, mat);
+
+                // Spawn area around camera look target (approx)
+                const cx = this.controls.target.x;
+                const cz = this.controls.target.z;
+
+                mesh.position.set(
+                    cx + (Math.random() - 0.5) * 40,
+                    15 + Math.random() * 5,
+                    cz + (Math.random() - 0.5) * 40
+                );
+
+                this.scene.add(mesh);
+                this.weatherParticles.push({ mesh, velocity: vel });
+            }
+        }
+
+        // Update Weather Position
+        for (let i = this.weatherParticles.length - 1; i >= 0; i--) {
+            const p = this.weatherParticles[i];
+            p.mesh.position.add(p.velocity);
+
+            // Reset if below ground
+            if (p.mesh.position.y < 0) {
+                this.scene.remove(p.mesh);
+                this.weatherParticles.splice(i, 1);
+            }
+        }
+
+        // Cleanup if weather stopped
+        if (this.weather === 'none' && this.weatherParticles.length > 0) {
+            for (let i = this.weatherParticles.length - 1; i >= 0; i--) {
+                this.scene.remove(this.weatherParticles[i].mesh);
+            }
+            this.weatherParticles = [];
+        }
+
+
+        // Update Particles (Explosions/Hits)
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             p.life -= 0.05;
@@ -514,27 +682,27 @@ export default class ThreeRenderer {
                 this.floatingTexts.splice(i, 1);
             } else {
                 t.sprite.position.add(t.velocity);
-                t.sprite.material.opacity = t.life;
+                t.sprite.material.opacity = t.life / t.maxLife;
             }
         }
     }
 
-    drawMinimap(_map: MapData, _player: any, _exploredTiles: Set<string>) {
-        // Not implemented in 3D view
-    }
-
-
     updateVisibility(visibleTiles: Set<string>, exploredTiles: Set<string>, level: number) {
-        if (this.tileMeshes.length < 6) return;
+        // console.log("updateVisibility", level, visibleTiles.size, "meshes:", this.tileMeshes.length);
+        if (this.tileMeshes.length < 10) return;
 
-        let fIdx = 0, wIdx = 0, gIdx = 0, dIdx = 0, wwIdx = 0, waIdx = 0;
+        let fIdx = 0, wIdx = 0, gIdx = 0, dIdx = 0, wwIdx = 0, waIdx = 0, lIdx = 0, mIdx = 0, cIdx = 0, doIdx = 0;
 
         const floorMesh = this.tileMeshes[0];
         const wallMesh = this.tileMeshes[1];
-        const grassMesh = this.tileMeshes[2];
-        const dirtMesh = this.tileMeshes[3];
-        const woodWallMesh = this.tileMeshes[4];
-        const waterMesh = this.tileMeshes[5];
+        const mossyMesh = this.tileMeshes[2];
+        const crackedMesh = this.tileMeshes[3];
+        const grassMesh = this.tileMeshes[4];
+        const dirtMesh = this.tileMeshes[5];
+        const woodWallMesh = this.tileMeshes[6];
+        const waterMesh = this.tileMeshes[7];
+        const lavaMesh = this.tileMeshes[8];
+        const doorMesh = this.tileMeshes[9];
 
         const dummy = new THREE.Object3D();
         const _color = new THREE.Color();
@@ -544,9 +712,9 @@ export default class ThreeRenderer {
                 const key = `${x},${y}`;
                 const tile = this.mapTiles[y][x];
                 const isVisible = visibleTiles.has(key);
-                const isExplored = exploredTiles.has(key) || level === 0; // Village always explored
+                const isExplored = exploredTiles.has(key);
 
-                const updateMesh = (mesh: THREE.InstancedMesh, idx: number, baseColor: number, dimColor: number) => {
+                const updateMesh = (mesh: THREE.InstancedMesh, idx: number, baseColor: number, dimColor: number, yOffset: number = 0, rotationY: number = 0) => {
                     if (!isExplored) {
                         dummy.scale.set(0, 0, 0);
                         dummy.updateMatrix();
@@ -555,7 +723,13 @@ export default class ThreeRenderer {
                         dummy.position.set(x, 0, y);
                         dummy.scale.set(1, 1, 1);
                         dummy.rotation.set(0, 0, 0);
-                        if (tile.startsWith('floor')) dummy.rotation.y = (x + y) % 4 * (Math.PI / 2);
+                        dummy.position.y = yOffset;
+                        dummy.rotation.y = rotationY;
+
+                        if (tile.startsWith('floor') && rotationY === 0) {
+                            dummy.rotation.y = (x + y) % 4 * (Math.PI / 2);
+                        }
+
                         dummy.updateMatrix();
                         mesh.setMatrixAt(idx, dummy.matrix);
 
@@ -568,21 +742,72 @@ export default class ThreeRenderer {
                     }
                 };
 
-                if (tile === 'floor' || tile === 'stairs' || tile.startsWith('door')) {
+                if (tile === 'floor' || tile.startsWith('door')) {
                     updateMesh(floorMesh, fIdx++, 0x888888, 0x444444);
-                } else if (tile === 'wall' || tile === 'door_closed') {
-                    updateMesh(wallMesh, wIdx++, 0xaaaaaa, 0x555555);
-                } else if (tile === 'floor_grass') {
-                    updateMesh(grassMesh, gIdx++, 0x88cc88, 0x446644);
-                } else if (tile === 'floor_dirt') {
+                }
+
+                if (tile.startsWith('wall')) {
+                    // Decide color based on wall type
+                    let color = 0x888888;
+                    let dimColor = 0x444444;
+                    if (tile === 'wall_mossy') { color = 0x55aa55; dimColor = 0x225522; }
+                    else if (tile === 'wall_cracked') { color = 0xaaaaaa; dimColor = 0x555555; }
+                    else if (tile === 'wall_wood') { color = 0x8B4513; dimColor = 0x452209; }
+
+                    if (tile === 'wall_mossy') updateMesh(mossyMesh, mIdx++, color, dimColor, 0);
+                    else if (tile === 'wall_cracked') updateMesh(crackedMesh, cIdx++, color, dimColor, 0);
+                    else if (tile === 'wall_wood') updateMesh(woodWallMesh, wwIdx++, color, dimColor, 0);
+                    else updateMesh(wallMesh, wIdx++, color, dimColor, 0);
+                } else if (tile === 'grass') {
+                    updateMesh(grassMesh, gIdx++, 0x44aa44, 0x225522);
+                    // Also render floor under grass? Maybe not needed if dense
+                } else if (tile === 'dirt') {
                     updateMesh(dirtMesh, dIdx++, 0x8B4513, 0x452209);
-                } else if (tile === 'wall_wood') {
-                    updateMesh(woodWallMesh, wwIdx++, 0x8B4513, 0x452209);
                 } else if (tile === 'water') {
-                    updateMesh(waterMesh, waIdx++, 0x0088ff, 0x004488);
+                    updateMesh(waterMesh, waIdx++, 0x0088ff, 0x004488, -0.2);
+                } else if (tile === 'lava') {
+                    updateMesh(lavaMesh, lIdx++, 0xffaa00, 0x884400); // Lava always bright?
+                } else if (tile.startsWith('door')) {
+                    // Door rotation logic
+                    let rot = Math.PI / 2;
+                    if (this.mapTiles[y] && this.mapTiles[y][x - 1] && this.mapTiles[y][x - 1].includes('wall')) {
+                        rot = 0;
+                    }
+                    updateMesh(doorMesh, doIdx++, 0x5D4037, 0x2e201b, 0, rot);
                 }
             }
         }
+
+        // Update Prop Visibility & Dimming
+        this.propMeshes.forEach(mesh => {
+            const x = mesh.userData.x;
+            const y = mesh.userData.y;
+            const key = `${x},${y}`;
+            const isExplored = exploredTiles.has(key);
+            const isVisible = visibleTiles.has(key);
+
+            mesh.visible = isExplored;
+
+            if (isExplored) {
+                mesh.traverse((child: any) => {
+                    if (child.isMesh) {
+                        // Store original color if not stored
+                        if (!child.userData.originalColor) {
+                            child.userData.originalColor = child.material.color.getHex();
+                        }
+
+                        if (isVisible) {
+                            child.material.color.setHex(child.userData.originalColor);
+                        } else {
+                            // Dim the color (Simple 50% brightness approximation)
+                            const original = new THREE.Color(child.userData.originalColor);
+                            const dimmed = original.multiplyScalar(0.5);
+                            child.material.color.copy(dimmed);
+                        }
+                    }
+                });
+            }
+        });
 
         this.tileMeshes.forEach(m => {
             m.instanceMatrix.needsUpdate = true;
@@ -598,6 +823,4 @@ export default class ThreeRenderer {
             duration: 300
         });
     }
-
-
 }

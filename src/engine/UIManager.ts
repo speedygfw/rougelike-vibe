@@ -35,10 +35,10 @@ export class UIManager {
     }
 
     toggleInventory(player: any) {
-        const invEl = document.getElementById('inventory');
+        const invEl = document.getElementById('inventory-overlay');
         if (!invEl) return;
         if (invEl.style.display === 'none' || invEl.style.display === '') {
-            invEl.style.display = 'block';
+            invEl.style.display = 'flex'; // Changed to flex to match CSS centering
             this.renderInventory(player);
         } else {
             invEl.style.display = 'none';
@@ -64,7 +64,7 @@ export class UIManager {
     }
 
     toggleSpellBook(player: any) {
-        const spellBookEl = document.getElementById('spellbook');
+        const spellBookEl = document.getElementById('spells-panel');
         if (!spellBookEl) return;
         if (spellBookEl.style.display === 'none' || spellBookEl.style.display === '') {
             spellBookEl.style.display = 'block';
@@ -75,7 +75,7 @@ export class UIManager {
     }
 
     renderSpellBook(player: any) {
-        const list = document.getElementById('spell-list');
+        const list = document.getElementById('spells-list'); // Changed from spell-list to match HTML if needed, waiting to check
         if (!list) return;
         list.innerHTML = '';
 

@@ -1,0 +1,27 @@
+
+    getRandomWalkable(map: any): {x: number, y: number} | null {
+        let attempts = 0;
+        while(attempts < 500) {
+            const x = Math.floor(Math.random() * map.width);
+            const y = Math.floor(Math.random() * map.height);
+            // Updated to be more permissive with tiles
+            const tile = map.tiles[y][x];
+             if (
+                tile !== 'wall' && 
+                tile !== 'water' && 
+                tile !== 'lava' && 
+                !tile.includes('wall')
+            ) {
+                return {x, y};
+            }
+            attempts++;
+        }
+        return null;
+    }
+
+    isWalkable(x: number, y: number): boolean {
+        if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) return false;
+        const tile = this.map.tiles[y][x];
+        // Must match blocking logic
+        return tile !== 'wall' && tile !== 'water' && tile !== 'lava' && !tile.includes('wall');
+    }

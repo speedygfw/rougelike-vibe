@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Verification</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* background: #000; Remove this so canvas (z-index -1) is visible if behind */
+            color: #fff;
+            font-family: monospace;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        button {
+            pointer-events: auto;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="info">
+        <h3>Visual Verification</h3>
+        <p>Instructions:</p>
+        <ul>
+            <li>Look for <b>Mossy Walls</b> (Greenish)</li>
+            <li>Look for <b>Cracked Walls</b> (Grey with cracks)</li>
+            <li>Look for <b>Lava</b> (Orange pools)</li>
+            <li>Check <b>Doors</b> (Brown, should have floor underneath)</li>
+        </ul>
+    </div>
+    <div id="controls">
+        <button onclick="window.genLevel(0)">Generate Village (Level 0)</button>
+        <button onclick="window.genLevel(1)">Generate Dungeon (Level 1)</button>
+        <button onclick="window.genLevel(6)">Generate Caves (Level 6)</button>
+        <button onclick="window.genLevel(16)">Generate Magma (Level 16)</button>
+    </div>
+    <div id="error-log"
+        style="position:fixed; bottom:0; left:0; right:0; background:rgba(255,0,0,0.8); color:white; padding:10px; z-index:9999; display:none; max-height: 200px; overflow:auto;">
+    </div>
+
+    <!-- Import Map and Renderer -->
+    <script type="module">
+        window.onerror = function (msg, url, line, col, error) {
+            const div = document.getElementById('error-log');
+            div.style.display = 'block';
+            div.innerHTML += `<div>Error: ${msg} at line ${line}</div>`;
+            console.error(msg, url, line, col, error);
+            return false;
+        };
+
+        import MapGenerator from './src/engine/MapGenerator.ts';
+        import ThreeRenderer from './src/engine/ThreeRenderer.ts';
+
+        // Mock Game Object
+        const game = {
+            map: null,
+            visibleTiles: new Set(),
+            exploredTiles: new Set(),
+            player: { x: 0, y: 0 },
+            debug: true // Unlocks camera
+        };
+
+        const renderer = new ThreeRenderer();
+        const mapGen = new MapGenerator(60, 40);
+
+        function generate(level) {
+            console.log("Generating level " + level);
+            const map = mapGen.generate(level);
+            game.map = map;
+            game.player.x = map.startX || Math.floor(map.width / 2);
+            game.player.y = map.startY || Math.floor(map.height / 2);
+
+            // Explore everything for verification
+            game.visibleTiles.clear();
+            game.exploredTiles.clear();
+            for (let y = 0; y < map.height; y++) {
+                for (let x = 0; x < map.width; x++) {
+                    game.visibleTiles.add(`${x},${y}`);
+                    game.exploredTiles.add(`${x},${y}`);
+                }
+            }
+
+            renderer.initMap(map);
+            renderer.updateVisibility(game.visibleTiles, game.exploredTiles, level);
+
+            // FORCE Camera Position to Center
+            const cx = map.width / 2;
+            const cy = map.height / 2;
+            renderer.controls.target.set(cx, 0, cy);
+            renderer.camera.position.set(cx + 20, 20, cy + 20);
+            renderer.controls.update();
+            console.log("Camera forced to center:", cx, cy);
+
+            renderer.render(game); // Initial Render
+        }
+
+        // Expose to window for inline onclick
+        window.genLevel = generate;
+
+        // Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (game.map) renderer.render(game);
+        }
+        animate();
+
+        // Initial
+        console.log("Starting Visual Test...");
+        setTimeout(() => generate(0), 100); // Small delay to ensure ready
+
+    </script>
+</body>
+
+</html>

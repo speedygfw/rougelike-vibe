@@ -47,7 +47,11 @@ But beware... the echoes of the past are not always friendly. You must descend 2
 *   **Enhanced Visuals**: 
     *   **Organic 3D Models**: Characters are rendered with distinct, human-like shapes using procedural geometry (no more blocky robots!).
     *   **Unique Appearances**: Every NPC class has a unique look, from the Smith's apron to the Healer's robes.
-    *   **Minimap**: Keep track of your exploration with a real-time minimap.
+    *   **Atmospheric Immersion**:
+        *   **Dynamic Day/Night Cycle**: Watch the sun rise and set over the village, changing the mood and lighting.
+        *   **Weather System**: Occasional rain and snow add variety to your journey.
+        *   **True Fog of War**: Unexplored areas are shrouded in a deep, dark void, with only visited areas revealed.
+        *   **Minimap**: Keep track of your exploration with a real-time minimap.
     *   Sleek "Dark Glass" interface with animations and clear feedback.
 
 ## 🎮 How to Play
